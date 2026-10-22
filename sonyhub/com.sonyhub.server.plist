@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.sonyhub.server</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>-m</string>
+        <string>http.server</string>
+        <string>3000</string>
+    </array>
+
+    <!-- Update this path to where your sony-home-theater-ai/sonyhub folder is located -->
+    <key>WorkingDirectory</key>
+    <string>/Users/Shared/sony-home-theater-ai/sonyhub</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/sonyhub-server.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/tmp/sonyhub-server.error.log</string>
+</dict>
+</plist>

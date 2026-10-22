@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Gradient for OLED Depth -->
+    <radialGradient id="bgGrad" cx="50%" cy="25%" r="75%">
+      <stop offset="0%" stop-color="#1A1A1E" />
+      <stop offset="60%" stop-color="#09090B" />
+      <stop offset="100%" stop-color="#000000" />
+    </radialGradient>
+
+    <!-- Subtle Bevel Border Gradient for Apple Glassmorphism -->
+    <linearGradient id="bevelGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255, 255, 255, 0.28)" />
+      <stop offset="30%" stop-color="rgba(255, 255, 255, 0.08)" />
+      <stop offset="100%" stop-color="rgba(255, 255, 255, 0.02)" />
+    </linearGradient>
+
+    <!-- Deep Blue Spatial Audio Glow -->
+    <radialGradient id="acousticGlow" cx="50%" cy="46%" r="50%">
+      <stop offset="0%" stop-color="#0A84FF" stop-opacity="0.45" />
+      <stop offset="50%" stop-color="#0A84FF" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#0A84FF" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Driver Cone Metallic Gradient -->
+    <linearGradient id="coneMetal" x1="20%" y1="20%" x2="80%" y2="80%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="50%" stop-color="#E5E5EA" />
+      <stop offset="85%" stop-color="#8E8E93" />
+      <stop offset="100%" stop-color="#48484A" />
+    </linearGradient>
+
+    <!-- Dust Cap Highlight -->
+    <radialGradient id="dustCapGrad" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="45%" stop-color="#0A84FF" />
+      <stop offset="100%" stop-color="#0040A8" />
+    </radialGradient>
+
+    <!-- Drop Glow Filter -->
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- iOS Squircle App Icon Base -->
+  <rect width="512" height="512" rx="120" fill="url(#bgGrad)" />
+  <rect width="510" height="510" x="1" y="1" rx="119" fill="none" stroke="url(#bevelGrad)" stroke-width="2" />
+
+  <!-- Acoustic Field Ambient Glow -->
+  <circle cx="256" cy="226" r="180" fill="url(#acousticGlow)" />
+
+  <!-- ================= SOUNDSTAGE & SPEAKER CONE ================= -->
+  <g transform="translate(0, -6)">
+    <!-- Radiating Sound Waves: Left and Right Wings -->
+    <!-- Arc 1 (Inner Wave) -->
+    <path d="M 334 176 A 70 70 0 0 1 334 276" fill="none" stroke="#0A84FF" stroke-width="8" stroke-linecap="round" opacity="0.95" />
+    <path d="M 178 176 A 70 70 0 0 0 178 276" fill="none" stroke="#0A84FF" stroke-width="8" stroke-linecap="round" opacity="0.95" />
+
+    <!-- Arc 2 (Middle Wave) -->
+    <path d="M 374 142 A 122 122 0 0 1 374 310" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" opacity="0.85" />
+    <path d="M 138 142 A 122 122 0 0 0 138 310" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" opacity="0.85" />
+
+    <!-- Arc 3 (Outer Wave) -->
+    <path d="M 412 110 A 175 175 0 0 1 412 342" fill="none" stroke="#0A84FF" stroke-width="6" stroke-linecap="round" opacity="0.45" />
+    <path d="M 100 110 A 175 175 0 0 0 100 342" fill="none" stroke="#0A84FF" stroke-width="6" stroke-linecap="round" opacity="0.45" />
+
+    <!-- Outer Speaker Frame Chassis -->
+    <circle cx="256" cy="226" r="82" fill="#1C1C1E" stroke="rgba(255, 255, 255, 0.12)" stroke-width="3" />
+    <!-- Speaker Rubber Surround -->
+    <circle cx="256" cy="226" r="68" fill="#111113" stroke="#2C2C2E" stroke-width="2" />
+    <!-- Carbon / Titanium Diaphragm Cone -->
+    <circle cx="256" cy="226" r="50" fill="url(#coneMetal)" />
+    <!-- Core Dust Cap with Blue Accent Reflection -->
+    <circle cx="256" cy="226" r="24" fill="url(#dustCapGrad)" filter="url(#softGlow)" />
+    <circle cx="251" cy="221" r="7" fill="#FFFFFF" opacity="0.65" />
+  </g>
+
+  <!-- ================= MONOGRAM & AUDIO STATUS ================= -->
+  <g transform="translate(256, 424)" text-anchor="middle">
+    <!-- SH Monogram in Apple SF Pro Minimalist Typography -->
+    <text x="0" y="0" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif" font-size="36" font-weight="800" letter-spacing="8" fill="#FFFFFF">
+      S<tspan fill="#0A84FF">H</tspan>
+    </text>
+
+    <!-- Subtitle / Dot Matrix Matrix -->
+    <g transform="translate(0, 22)">
+      <circle cx="-32" cy="0" r="3" fill="#0A84FF" opacity="0.6" />
+      <circle cx="-16" cy="0" r="3.5" fill="#0A84FF" opacity="0.9" />
+      <circle cx="0" cy="0" r="4.5" fill="#34C759" />
+      <circle cx="16" cy="0" r="3.5" fill="#0A84FF" opacity="0.9" />
+      <circle cx="32" cy="0" r="3" fill="#0A84FF" opacity="0.6" />
+    </g>
+  </g>
+</svg>

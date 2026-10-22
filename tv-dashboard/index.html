@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Home Theater AI · Dashboard</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Alpine.js CDN -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            display: ['"Playfair Display"', 'Georgia', 'serif'],
+          },
+          colors: {
+            glass: 'rgba(255,255,255,0.06)',
+            'glass-border': 'rgba(255,255,255,0.12)',
+          },
+          backdropBlur: { xs: '2px' },
+          keyframes: {
+            'gradient-shift': {
+              '0%,100%': { backgroundPosition: '0% 50%' },
+              '50%': { backgroundPosition: '100% 50%' },
+            },
+            shimmer: {
+              '0%': { backgroundPosition: '-700px 0' },
+              '100%': { backgroundPosition: '700px 0' },
+            },
+            'fade-up': {
+              '0%': { opacity: '0', transform: 'translateY(24px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            'fade-in': {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
+            },
+            pulse_soft: {
+              '0%,100%': { opacity: '1' },
+              '50%': { opacity: '0.5' },
+            },
+            'glow-pulse': {
+              '0%,100%': { boxShadow: '0 0 20px rgba(139,92,246,0.3)' },
+              '50%': { boxShadow: '0 0 40px rgba(139,92,246,0.7)' },
+            },
+            spin_slow: {
+              '100%': { transform: 'rotate(360deg)' },
+            },
+          },
+          animation: {
+            'gradient-shift': 'gradient-shift 15s ease infinite',
+            shimmer: 'shimmer 1.6s infinite linear',
+            'fade-up': 'fade-up 0.7s ease both',
+            'fade-in': 'fade-in 0.5s ease both',
+            'pulse-soft': 'pulse_soft 2.5s ease-in-out infinite',
+            'glow-pulse': 'glow-pulse 2s ease-in-out infinite',
+            'spin-slow': 'spin_slow 8s linear infinite',
+          },
+        },
+      },
+    }
+  </script>
+
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #050508;
+      color: #f0f0f5;
+    }
+
+    /* ── Animated gradient background ── */
+    .bg-cinematic {
+      background: linear-gradient(
+        135deg,
+        #050508 0%,
+        #0d0d1a 25%,
+        #100a1f 50%,
+        #0a0f1a 75%,
+        #050508 100%
+      );
+      background-size: 400% 400%;
+      animation: gradient-shift 18s ease infinite;
+    }
+
+    /* Subtle aurora blobs */
+    .aurora-blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.18;
+    }
+
+    /* ── Glassmorphism card ── */
+    .glass-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.10);
+      backdrop-filter: blur(24px) saturate(1.4);
+      -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    }
+    .glass-card-hover {
+      transition: background 0.3s, border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+    }
+    .glass-card-hover:hover {
+      background: rgba(255,255,255,0.09);
+      border-color: rgba(255,255,255,0.22);
+      transform: translateY(-3px) scale(1.012);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 30px rgba(139,92,246,0.15);
+    }
+
+    /* ── Shimmer skeleton ── */
+    .skeleton {
+      background: linear-gradient(
+        90deg,
+        rgba(255,255,255,0.05) 25%,
+        rgba(255,255,255,0.12) 50%,
+        rgba(255,255,255,0.05) 75%
+      );
+      background-size: 700px 100%;
+      animation: shimmer 1.6s infinite linear;
+      border-radius: 8px;
+    }
+
+    /* ── Gradient text ── */
+    .gradient-text {
+      background: linear-gradient(135deg, #c084fc, #818cf8, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .gradient-text-warm {
+      background: linear-gradient(135deg, #fbbf24, #f97316, #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── Mood button ── */
+    .mood-btn {
+      position: relative;
+      overflow: hidden;
+      transition: all 0.25s ease;
+      cursor: pointer;
+    }
+    .mood-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(139,92,246,0.3), rgba(56,189,248,0.2));
+      opacity: 0;
+      transition: opacity 0.25s;
+    }
+    .mood-btn:hover::before, .mood-btn.active::before { opacity: 1; }
+    .mood-btn:hover {
+      border-color: rgba(139,92,246,0.7) !important;
+      transform: translateY(-2px) scale(1.04);
+      box-shadow: 0 8px 30px rgba(139,92,246,0.3);
+    }
+    .mood-btn.active {
+      border-color: rgba(139,92,246,0.9) !important;
+      box-shadow: 0 0 0 2px rgba(139,92,246,0.5), 0 8px 30px rgba(139,92,246,0.4);
+    }
+
+    /* ── App icon ── */
+    .app-icon {
+      transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      cursor: default;
+    }
+    .app-icon:hover {
+      transform: translateY(-6px) scale(1.08);
+    }
+
+    /* ── Clock digits ── */
+    .clock-digits {
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      text-shadow: 0 0 80px rgba(192,132,252,0.3);
+    }
+
+    /* ── Match score ring ── */
+    .score-ring {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: conic-gradient(#818cf8 calc(var(--pct) * 3.6deg), rgba(255,255,255,0.08) 0deg);
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+    .score-ring::after {
+      content: '';
+      position: absolute;
+      inset: 5px;
+      border-radius: 50%;
+      background: #0d0d1a;
+    }
+    .score-ring span { position: relative; z-index: 1; font-size: 0.7rem; font-weight: 700; }
+
+    /* ── Now Playing bar ── */
+    .now-playing-bar {
+      background: rgba(10,10,20,0.92);
+      border-top: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+    }
+    .progress-bar-fill {
+      background: linear-gradient(90deg, #8b5cf6, #38bdf8);
+      border-radius: 2px;
+      transition: width 0.5s linear;
+    }
+
+    /* ── Weather icon pulse ── */
+    .weather-icon { filter: drop-shadow(0 0 12px rgba(251,191,36,0.5)); }
+
+    /* ── Focus ring for TV remote nav ── */
+    :focus-visible {
+      outline: 2px solid #818cf8;
+      outline-offset: 3px;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 0; }
+
+    /* ── Animations delay helpers ── */
+    .delay-100 { animation-delay: 0.1s; }
+    .delay-200 { animation-delay: 0.2s; }
+    .delay-300 { animation-delay: 0.3s; }
+    .delay-400 { animation-delay: 0.4s; }
+    .delay-500 { animation-delay: 0.5s; }
+  </style>
+</head>
+
+<body class="bg-cinematic h-screen flex flex-col select-none" x-data="dashboard()" x-init="init()">
+
+  <!-- ─── Aurora background blobs ─────────────────────────────── -->
+  <div class="aurora-blob w-[700px] h-[700px] bg-purple-700 top-[-200px] left-[-200px]"></div>
+  <div class="aurora-blob w-[500px] h-[500px] bg-blue-700 bottom-[-100px] right-[-100px]"></div>
+  <div class="aurora-blob w-[400px] h-[400px] bg-indigo-600 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+
+  <!-- ─── Main scrollable content ──────────────────────────────── -->
+  <main class="relative z-10 flex-1 overflow-hidden flex flex-col gap-5 px-10 pt-7 pb-3"
+        style="max-height: calc(100vh - 72px);">
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!--  SECTION 1 · HERO                                          -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <section class="grid grid-cols-[1fr_auto] gap-6 items-start animate-fade-up">
+
+      <!-- Left: Greeting + Clock + Date -->
+      <div class="flex flex-col gap-1">
+        <!-- Greeting -->
+        <p class="text-lg font-medium tracking-widest uppercase gradient-text opacity-0 animate-fade-up"
+           style="animation-delay:0.05s; animation-fill-mode:forwards;">
+          <span x-text="greeting"></span> 👋
+        </p>
+
+        <!-- Clock -->
+        <div class="clock-digits text-[5.5rem] font-bold text-white opacity-0 animate-fade-up delay-100"
+             style="animation-fill-mode:forwards;"
+             x-text="currentTime"></div>
+
+        <!-- Date -->
+        <p class="text-xl text-white/50 font-light tracking-wide opacity-0 animate-fade-up delay-200"
+           style="animation-fill-mode:forwards;"
+           x-text="currentDate"></p>
+      </div>
+
+      <!-- Right: Weather widget -->
+      <div class="glass-card glass-card-hover rounded-2xl p-5 min-w-[260px] opacity-0 animate-fade-up delay-300"
+           style="animation-fill-mode:forwards;">
+        <template x-if="!weather.loaded && !weather.error">
+          <!-- skeleton -->
+          <div class="flex flex-col gap-3">
+            <div class="skeleton h-5 w-28 rounded"></div>
+            <div class="skeleton h-10 w-20 rounded"></div>
+            <div class="skeleton h-4 w-36 rounded"></div>
+          </div>
+        </template>
+
+        <template x-if="weather.error">
+          <div class="text-white/40 text-sm flex items-center gap-2">
+            <i data-lucide="cloud-off" class="w-5 h-5"></i>
+            <span>Weather unavailable</span>
+          </div>
+        </template>
+
+        <template x-if="weather.loaded">
+          <div class="flex flex-col gap-1">
+            <div class="flex items-center gap-2 text-white/50 text-xs tracking-widest uppercase mb-1">
+              <i data-lucide="map-pin" class="w-3 h-3"></i>
+              <span x-text="weather.location"></span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-5xl weather-icon" x-text="weather.icon"></span>
+              <div>
+                <div class="text-4xl font-bold text-white" x-text="weather.temp + '°C'"></div>
+                <div class="text-sm text-white/60" x-text="weather.description"></div>
+              </div>
+            </div>
+            <div class="flex gap-4 mt-2 text-xs text-white/40">
+              <span>💧 <span x-text="weather.humidity + '%'"></span></span>
+              <span>🌬 <span x-text="weather.wind + ' km/h'"></span></span>
+              <span>↑ <span x-text="weather.high + '°'"></span> ↓ <span x-text="weather.low + '°'"></span></span>
+            </div>
+          </div>
+        </template>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!--  SECTION 2 · AI RECOMMENDS                                  -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <section class="flex flex-col gap-3 opacity-0 animate-fade-up delay-200" style="animation-fill-mode:forwards;">
+
+      <!-- Section header -->
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-1 h-6 rounded-full bg-gradient-to-b from-purple-400 to-blue-400"></div>
+          <h2 class="font-display text-2xl font-semibold text-white">AI Recommends</h2>
+          <span class="text-white/30 text-sm italic">What should I watch tonight?</span>
+        </div>
+        <!-- Status indicator -->
+        <div class="flex items-center gap-2 text-xs"
+             :class="apiOnline ? 'text-emerald-400' : 'text-yellow-400/70'">
+          <div class="w-2 h-2 rounded-full animate-pulse-soft"
+               :class="apiOnline ? 'bg-emerald-400' : 'bg-yellow-400'"></div>
+          <span x-text="apiOnline ? 'AI Online' : 'Offline Mode'"></span>
+        </div>
+      </div>
+
+      <!-- Mood buttons -->
+      <div class="flex gap-3 flex-wrap">
+        <template x-for="mood in moods" :key="mood.id">
+          <button class="mood-btn glass-card rounded-xl px-4 py-2 flex items-center gap-2 text-sm font-medium text-white/80 border border-white/10 focus:outline-none"
+                  :class="{ 'active': activeMood === mood.id }"
+                  @click="selectMood(mood.id)"
+                  :tabindex="0">
+            <span x-text="mood.emoji" class="text-lg"></span>
+            <span x-text="mood.label"></span>
+          </button>
+        </template>
+      </div>
+
+      <!-- Recommendation area -->
+      <div class="grid grid-cols-3 gap-4" style="min-height: 180px;">
+
+        <!-- Loading skeletons -->
+        <template x-if="loadingRecs">
+          <template x-for="i in [1,2,3]" :key="i">
+            <div class="glass-card rounded-2xl p-4 flex gap-3 overflow-hidden">
+              <div class="skeleton w-[70px] h-[100px] rounded-xl flex-shrink-0"></div>
+              <div class="flex flex-col gap-2 flex-1 pt-1">
+                <div class="skeleton h-4 w-3/4 rounded"></div>
+                <div class="skeleton h-3 w-full rounded"></div>
+                <div class="skeleton h-3 w-5/6 rounded"></div>
+                <div class="skeleton h-3 w-1/2 rounded mt-1"></div>
+              </div>
+            </div>
+          </template>
+        </template>
+
+        <!-- Recommendation cards -->
+        <template x-if="!loadingRecs && recommendations.length > 0">
+          <template x-for="(rec, idx) in recommendations" :key="rec.title">
+            <div class="glass-card glass-card-hover rounded-2xl p-4 flex gap-4 overflow-hidden opacity-0 animate-fade-up"
+                 :style="`animation-delay: ${idx * 0.1}s; animation-fill-mode: forwards;`">
+
+              <!-- Poster -->
+              <div class="flex-shrink-0 w-[72px] h-[108px] rounded-xl overflow-hidden relative bg-white/5">
+                <template x-if="rec.poster">
+                  <img :src="rec.poster" :alt="rec.title"
+                       class="w-full h-full object-cover"
+                       @error="$event.target.style.display='none'" />
+                </template>
+                <template x-if="!rec.poster">
+                  <!-- Placeholder gradient poster -->
+                  <div class="w-full h-full flex items-center justify-center"
+                       :style="`background: linear-gradient(135deg, ${rec.color1 || '#4c1d95'}, ${rec.color2 || '#1e3a5f'})`">
+                    <span class="text-3xl" x-text="rec.emoji || '🎬'"></span>
+                  </div>
+                </template>
+              </div>
+
+              <!-- Info -->
+              <div class="flex flex-col justify-between flex-1 min-w-0">
+                <div>
+                  <h3 class="font-display text-white font-semibold text-base leading-tight mb-1 truncate"
+                      x-text="rec.title"></h3>
+                  <p class="text-white/50 text-xs leading-relaxed line-clamp-3"
+                     x-text="rec.description"></p>
+                </div>
+                <div class="flex items-center justify-between mt-2">
+                  <!-- Platform badge -->
+                  <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                        :class="platformClass(rec.platform)"
+                        x-text="rec.platform"></span>
+                  <!-- Match score ring -->
+                  <div class="score-ring" :style="`--pct: ${rec.score || 85}`">
+                    <span class="gradient-text text-[10px] font-bold z-10" x-text="(rec.score || 85) + '%'"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </template>
+
+        <!-- Empty placeholder -->
+        <template x-if="!loadingRecs && recommendations.length === 0">
+          <div class="col-span-3 flex items-center justify-center text-white/20 text-sm gap-2 py-8">
+            <i data-lucide="sparkles" class="w-5 h-5"></i>
+            <span>Pick a mood to get personalized recommendations</span>
+          </div>
+        </template>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!--  SECTION 3 · QUICK APPS                                     -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <section class="opacity-0 animate-fade-up delay-400" style="animation-fill-mode:forwards;">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-1 h-6 rounded-full bg-gradient-to-b from-pink-400 to-orange-400"></div>
+        <h2 class="font-display text-2xl font-semibold text-white">Quick Launch</h2>
+      </div>
+
+      <div class="flex gap-5 flex-wrap">
+        <template x-for="app in apps" :key="app.name">
+          <div class="app-icon flex flex-col items-center gap-2 focus:outline-none"
+               tabindex="0"
+               @keydown.enter="() => {}"
+               @keydown.space="() => {}">
+            <!-- Icon container -->
+            <div class="w-16 h-16 rounded-2xl flex items-center justify-center relative overflow-hidden"
+                 :style="`background: ${app.bg}; box-shadow: 0 8px 32px ${app.glow}40;`">
+              <!-- Subtle inner shine -->
+              <div class="absolute inset-0 bg-gradient-to-br from-white/15 to-transparent"></div>
+              <span class="text-3xl relative z-10" x-text="app.icon"></span>
+            </div>
+            <span class="text-xs text-white/50 font-medium" x-text="app.name"></span>
+          </div>
+        </template>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ─── NOW PLAYING BAR ───────────────────────────────────────── -->
+  <footer class="now-playing-bar relative z-20 h-[72px] flex items-center px-10 gap-6 flex-shrink-0"
+          x-show="nowPlaying.active"
+          x-transition:enter="transition ease-out duration-500"
+          x-transition:enter-start="opacity-0 translate-y-4"
+          x-transition:enter-end="opacity-100 translate-y-0">
+
+    <!-- Album art / thumbnail -->
+    <div class="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 relative"
+         :style="`background: linear-gradient(135deg, ${nowPlaying.color1 || '#4c1d95'}, ${nowPlaying.color2 || '#1e3a5f'})`">
+      <template x-if="nowPlaying.thumbnail">
+        <img :src="nowPlaying.thumbnail" class="w-full h-full object-cover" />
+      </template>
+      <template x-if="!nowPlaying.thumbnail">
+        <div class="w-full h-full flex items-center justify-center">
+          <i data-lucide="music" class="w-5 h-5 text-white/60"></i>
+        </div>
+      </template>
+    </div>
+
+    <!-- Track info -->
+    <div class="flex flex-col min-w-0 flex-shrink-0">
+      <span class="text-white font-semibold text-sm truncate" x-text="nowPlaying.title || 'Now Playing'"></span>
+      <span class="text-white/40 text-xs truncate" x-text="nowPlaying.subtitle || ''"></span>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="flex-1 flex flex-col gap-1">
+      <div class="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+        <div class="progress-bar-fill h-full" :style="`width: ${nowPlaying.progress || 0}%`"></div>
+      </div>
+      <div class="flex justify-between text-xs text-white/30">
+        <span x-text="nowPlaying.elapsed || '0:00'"></span>
+        <span x-text="nowPlaying.duration || '0:00'"></span>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="flex items-center gap-4 text-white/50 flex-shrink-0">
+      <i data-lucide="skip-back" class="w-5 h-5 hover:text-white transition-colors cursor-pointer"></i>
+      <div class="w-10 h-10 rounded-full glass-card flex items-center justify-center cursor-pointer hover:bg-white/15 transition-colors">
+        <i :data-lucide="nowPlaying.paused ? 'play' : 'pause'" class="w-5 h-5 text-white"></i>
+      </div>
+      <i data-lucide="skip-forward" class="w-5 h-5 hover:text-white transition-colors cursor-pointer"></i>
+      <i data-lucide="volume-2" class="w-5 h-5 hover:text-white transition-colors cursor-pointer"></i>
+    </div>
+
+    <!-- Source badge -->
+    <div class="glass-card rounded-lg px-3 py-1.5 text-xs text-white/60 flex-shrink-0"
+         x-text="nowPlaying.source || 'Home Theater AI'"></div>
+  </footer>
+
+  <!-- ─── FOOTER (when no now playing) ─────────────────────────── -->
+  <footer class="now-playing-bar relative z-20 h-[72px] flex items-center justify-between px-10 flex-shrink-0"
+          x-show="!nowPlaying.active">
+    <div class="flex items-center gap-3">
+      <!-- Animated logo mark -->
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+        <i data-lucide="tv-2" class="w-4 h-4 text-white"></i>
+      </div>
+      <span class="font-display text-white/70 text-sm italic">Home Theater <span class="gradient-text font-semibold not-italic">AI</span></span>
+    </div>
+    <div class="text-white/20 text-xs tracking-widest uppercase">Sony Bravia · 4K Display</div>
+    <div class="text-white/20 text-xs" x-text="'v1.0 · ' + currentDate"></div>
+  </footer>
+
+  <!-- ─── Alpine.js App Logic ───────────────────────────────────── -->
+  <script>
+    function dashboard() {
+      return {
+        // ── State ──────────────────────────────────────────────
+        currentTime: '',
+        currentDate: '',
+        greeting: '',
+        weather: { loaded: false, error: false },
+        activeMood: null,
+        loadingRecs: false,
+        recommendations: [],
+        apiOnline: false,
+        nowPlaying: {
+          active: false,
+          title: '',
+          subtitle: '',
+          source: '',
+          progress: 0,
+          elapsed: '0:00',
+          duration: '0:00',
+          paused: false,
+          color1: '#4c1d95',
+          color2: '#1e3a5f',
+          thumbnail: null,
+        },
+
+        // ── Mood catalogue ─────────────────────────────────────
+        moods: [
+          { id: 'feel-good', emoji: '😊', label: 'Feel Good' },
+          { id: 'thriller',  emoji: '😱', label: 'Thriller'  },
+          { id: 'comedy',    emoji: '🤣', label: 'Comedy'    },
+          { id: 'drama',     emoji: '💔', label: 'Drama'     },
+          { id: 'sci-fi',    emoji: '🚀', label: 'Sci-Fi'    },
+          { id: 'family',    emoji: '👨‍👩‍👧', label: 'Family'    },
+        ],
+
+        // ── Quick apps ─────────────────────────────────────────
+        apps: [
+          { name: 'Netflix',    icon: 'N',  bg: '#E50914', glow: '#E50914' },
+          { name: 'YouTube',    icon: '▶',  bg: '#FF0000', glow: '#FF0000' },
+          { name: 'Prime',      icon: '📦', bg: '#00A8E0', glow: '#00A8E0' },
+          { name: 'Disney+',    icon: '✦',  bg: '#0E2E82', glow: '#0E2E82' },
+          { name: 'Apple TV+',  icon: '',  bg: '#1C1C1E', glow: '#888888' },
+          { name: 'Spotify',    icon: '♪',  bg: '#1DB954', glow: '#1DB954' },
+        ],
+
+        // ── Fallback recommendations ───────────────────────────
+        fallbackRecs: {
+          'feel-good': [
+            {
+              title: 'The Grand Budapest Hotel',
+              description: 'A whimsical tale of a legendary concierge and his protégé across a fictional European republic. Pure delight.',
+              platform: 'Netflix',
+              score: 92,
+              emoji: '🏨',
+              color1: '#7c3aed', color2: '#db2777',
+            },
+            {
+              title: 'Julie & Julia',
+              description: 'Two women — separated by time but united by a love of cooking — discover their passion and identity.',
+              platform: 'Prime Video',
+              score: 87,
+              emoji: '🍳',
+              color1: '#d97706', color2: '#b45309',
+            },
+            {
+              title: 'Paddington 2',
+              description: 'The beloved bear returns in a heartwarming adventure that reminds us kindness always wins.',
+              platform: 'HBO Max',
+              score: 95,
+              emoji: '🐻',
+              color1: '#065f46', color2: '#0369a1',
+            },
+          ],
+          'thriller': [
+            {
+              title: 'Parasite',
+              description: 'A poor family schemes to become employed by a wealthy family. A masterclass in tension and social commentary.',
+              platform: 'Hulu',
+              score: 98,
+              emoji: '🎭',
+              color1: '#1e1b4b', color2: '#0f172a',
+            },
+            {
+              title: 'Gone Girl',
+              description: 'A man becomes the prime suspect in his wife\'s disappearance. Nothing is as it seems.',
+              platform: 'Netflix',
+              score: 91,
+              emoji: '🔍',
+              color1: '#450a0a', color2: '#1c1917',
+            },
+            {
+              title: 'No Country for Old Men',
+              description: 'A hunter stumbles upon a drug deal gone wrong. What follows is relentlessly gripping.',
+              platform: 'Prime Video',
+              score: 96,
+              emoji: '🌵',
+              color1: '#78350f', color2: '#292524',
+            },
+          ],
+          'comedy': [
+            {
+              title: 'What We Do in the Shadows',
+              description: 'A mockumentary following vampire flatmates navigating modern life in Wellington, New Zealand.',
+              platform: 'Hulu',
+              score: 94,
+              emoji: '🧛',
+              color1: '#3b0764', color2: '#1e1b4b',
+            },
+            {
+              title: 'The Grand Budapest Hotel',
+              description: 'Wes Anderson\'s most colourful masterpiece — hilarious, stylish, and deeply heartfelt.',
+              platform: 'Netflix',
+              score: 92,
+              emoji: '🏨',
+              color1: '#7c3aed', color2: '#db2777',
+            },
+            {
+              title: 'Game Night',
+              description: 'A couples game night turns into something much more dangerous and much funnier than expected.',
+              platform: 'Netflix',
+              score: 84,
+              emoji: '🎲',
+              color1: '#0369a1', color2: '#1e3a5f',
+            },
+          ],
+          'drama': [
+            {
+              title: 'The Shawshank Redemption',
+              description: 'Two imprisoned men bond over years and find solace and eventual redemption through acts of decency.',
+              platform: 'Netflix',
+              score: 99,
+              emoji: '⛓️',
+              color1: '#1c1917', color2: '#292524',
+            },
+            {
+              title: 'Marriage Story',
+              description: 'An intimate portrait of a marriage and its dissolution. Noah Baumbach at his most raw and honest.',
+              platform: 'Netflix',
+              score: 93,
+              emoji: '💍',
+              color1: '#0f172a', color2: '#1e293b',
+            },
+            {
+              title: 'Manchester by the Sea',
+              description: 'A deeply moving story about grief, guilt and the bonds of family that refuse to break.',
+              platform: 'Prime Video',
+              score: 96,
+              emoji: '🌊',
+              color1: '#0c4a6e', color2: '#1e3a5f',
+            },
+          ],
+          'sci-fi': [
+            {
+              title: 'Arrival',
+              description: 'A linguist is recruited to communicate with alien lifeforms. A breathtaking meditation on time and language.',
+              platform: 'Netflix',
+              score: 97,
+              emoji: '🛸',
+              color1: '#0f172a', color2: '#0c4a6e',
+            },
+            {
+              title: 'Blade Runner 2049',
+              description: 'A visually stunning neo-noir odyssey. One of the most beautiful films ever put on screen.',
+              platform: 'Prime Video',
+              score: 96,
+              emoji: '🤖',
+              color1: '#431407', color2: '#1c1917',
+            },
+            {
+              title: 'Dune',
+              description: 'A young nobleman travels to a dangerous desert planet. Epic, immersive, and awe-inspiring.',
+              platform: 'HBO Max',
+              score: 95,
+              emoji: '🏜️',
+              color1: '#78350f', color2: '#451a03',
+            },
+          ],
+          'family': [
+            {
+              title: 'Coco',
+              description: 'A young musician travels to the Land of the Dead to find his great-great-grandfather. Pure Pixar magic.',
+              platform: 'Disney+',
+              score: 97,
+              emoji: '💀',
+              color1: '#7c2d12', color2: '#9a3412',
+            },
+            {
+              title: 'Paddington 2',
+              description: 'The beloved bear is framed for a theft he didn\'t commit. Funny, tender, and utterly charming.',
+              platform: 'HBO Max',
+              score: 95,
+              emoji: '🐻',
+              color1: '#065f46', color2: '#0369a1',
+            },
+            {
+              title: 'The Incredibles',
+              description: 'A family of undercover superheroes tries to live a quiet suburban life — until duty calls again.',
+              platform: 'Disney+',
+              score: 97,
+              emoji: '🦸',
+              color1: '#991b1b', color2: '#c2410c',
+            },
+          ],
+        },
+
+        // ── Platform badge classes ─────────────────────────────
+        platformClass(platform) {
+          const map = {
+            'Netflix':    'bg-red-900/60 text-red-300 border border-red-700/40',
+            'Prime Video':'bg-blue-900/60 text-blue-300 border border-blue-700/40',
+            'HBO Max':    'bg-purple-900/60 text-purple-300 border border-purple-700/40',
+            'Hulu':       'bg-green-900/60 text-green-300 border border-green-700/40',
+            'Disney+':    'bg-indigo-900/60 text-indigo-300 border border-indigo-700/40',
+            'Apple TV+':  'bg-zinc-800/60 text-zinc-300 border border-zinc-600/40',
+          };
+          return map[platform] || 'bg-white/10 text-white/60 border border-white/10';
+        },
+
+        // ── Init ───────────────────────────────────────────────
+        async init() {
+          this.updateClock();
+          setInterval(() => this.updateClock(), 1000);
+          await this.fetchWeather();
+          await this.checkApiStatus();
+          // Re-init Lucide icons after Alpine renders DOM
+          this.$nextTick(() => {
+            if (window.lucide) lucide.createIcons();
+          });
+        },
+
+        // ── Clock & greeting ───────────────────────────────────
+        updateClock() {
+          const now = new Date();
+          const h = now.getHours();
+          this.currentTime = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+          this.currentDate = now.toLocaleDateString('en-GB', {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+          });
+          if (h < 5)       this.greeting = 'Good Night';
+          else if (h < 12) this.greeting = 'Good Morning';
+          else if (h < 17) this.greeting = 'Good Afternoon';
+          else if (h < 21) this.greeting = 'Good Evening';
+          else             this.greeting = 'Good Night';
+        },
+
+        // ── Weather (Open-Meteo, no key needed) ───────────────
+        async fetchWeather() {
+          try {
+            // Get approximate location from IP first (ipapi.co is free, no key)
+            let lat = 51.5074, lon = -0.1278, city = 'London';
+            try {
+              const geo = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(4000) });
+              if (geo.ok) {
+                const gj = await geo.json();
+                lat  = gj.latitude  || lat;
+                lon  = gj.longitude || lon;
+                city = gj.city      || city;
+              }
+            } catch (_) { /* fallback to London */ }
+
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+              + `&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,apparent_temperature`
+              + `&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`;
+
+            const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+            if (!res.ok) throw new Error('Bad response');
+            const data = await res.json();
+            const c = data.current;
+            const d = data.daily;
+
+            this.weather = {
+              loaded: true, error: false,
+              location: city,
+              temp: Math.round(c.temperature_2m),
+              description: this.wmoDescription(c.weather_code),
+              icon: this.wmoIcon(c.weather_code),
+              humidity: c.relative_humidity_2m,
+              wind: Math.round(c.wind_speed_10m),
+              high: Math.round(d.temperature_2m_max[0]),
+              low:  Math.round(d.temperature_2m_min[0]),
+            };
+          } catch (e) {
+            this.weather = { loaded: false, error: true };
+          }
+          this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+        },
+
+        // WMO weather code → human text
+        wmoDescription(code) {
+          const map = {
+            0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
+            45: 'Foggy', 48: 'Icy fog',
+            51: 'Light drizzle', 53: 'Moderate drizzle', 55: 'Heavy drizzle',
+            61: 'Slight rain', 63: 'Moderate rain', 65: 'Heavy rain',
+            71: 'Slight snow', 73: 'Moderate snow', 75: 'Heavy snow',
+            80: 'Slight showers', 81: 'Moderate showers', 82: 'Violent showers',
+            95: 'Thunderstorm', 96: 'Thunderstorm w/ hail', 99: 'Thunderstorm w/ heavy hail',
+          };
+          return map[code] || 'Weather data';
+        },
+
+        // WMO weather code → emoji icon
+        wmoIcon(code) {
+          if (code === 0)  return '☀️';
+          if (code <= 2)   return '🌤️';
+          if (code === 3)  return '☁️';
+          if (code <= 48)  return '🌫️';
+          if (code <= 55)  return '🌦️';
+          if (code <= 65)  return '🌧️';
+          if (code <= 77)  return '❄️';
+          if (code <= 82)  return '🌩️';
+          return '⛈️';
+        },
+
+        // ── Check local API status ─────────────────────────────
+        async checkApiStatus() {
+          try {
+            const res = await fetch('http://localhost:8000/health', {
+              signal: AbortSignal.timeout(2000),
+            });
+            this.apiOnline = res.ok;
+          } catch (_) {
+            this.apiOnline = false;
+          }
+        },
+
+        // ── Mood selection & recommendations ──────────────────
+        async selectMood(moodId) {
+          if (this.loadingRecs) return;
+          this.activeMood = moodId;
+          this.recommendations = [];
+          this.loadingRecs = true;
+          this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+
+          const timeOfDay = this.greeting.toLowerCase().replace('good ', '');
+
+          if (this.apiOnline) {
+            try {
+              const url = `http://localhost:8000/recommend?mood=${encodeURIComponent(moodId)}&time=${encodeURIComponent(timeOfDay)}`;
+              const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+              if (!res.ok) throw new Error('API error');
+              const data = await res.json();
+              // Expect { recommendations: [...] } or an array
+              this.recommendations = Array.isArray(data) ? data : (data.recommendations || []);
+            } catch (_) {
+              // API failed mid-request, fall back
+              this.apiOnline = false;
+              await this._delay(400);
+              this.recommendations = this.fallbackRecs[moodId] || [];
+            }
+          } else {
+            // Simulate a brief "thinking" moment even offline
+            await this._delay(900);
+            this.recommendations = this.fallbackRecs[moodId] || [];
+          }
+
+          this.loadingRecs = false;
+          this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+        },
+
+        _delay(ms) {
+          return new Promise(r => setTimeout(r, ms));
+        },
+
+        // ── Keyboard navigation (TV remote arrow keys) ─────────
+        handleKeydown(e) {
+          const focusable = [...document.querySelectorAll('[tabindex="0"]')];
+          const idx = focusable.indexOf(document.activeElement);
+          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+            e.preventDefault();
+            focusable[Math.min(idx + 1, focusable.length - 1)]?.focus();
+          } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            focusable[Math.max(idx - 1, 0)]?.focus();
+          } else if (e.key === 'Enter' || e.key === ' ') {
+            document.activeElement?.click();
+          }
+        },
+      };
+    }
+  </script>
+
+  <!-- Keyboard navigation event listener (body level) -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Re-run Lucide icon rendering on any Alpine mutation
+      const obs = new MutationObserver(() => {
+        if (window.lucide) lucide.createIcons();
+      });
+      obs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-lucide'] });
+
+      // TV remote arrow key navigation
+      document.addEventListener('keydown', (e) => {
+        if (!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter',' '].includes(e.key)) return;
+        const focusable = [...document.querySelectorAll('[tabindex="0"]')];
+        const idx = focusable.indexOf(document.activeElement);
+        if (idx === -1) { focusable[0]?.focus(); return; }
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          focusable[Math.min(idx + 1, focusable.length - 1)]?.focus();
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          focusable[Math.max(idx - 1, 0)]?.focus();
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>

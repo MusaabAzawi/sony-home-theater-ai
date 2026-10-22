@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SonyHub · Icon Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background-color: #000000;
+      color: #FFFFFF;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif;
+    }
+    .glass-card {
+      background-color: #1C1C1E;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+    }
+  </style>
+</head>
+<body class="min-h-screen p-6 md:p-12 flex flex-col items-center justify-center">
+
+  <div class="max-w-2xl w-full space-y-8 text-center">
+    <!-- Header -->
+    <div class="space-y-3">
+      <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30">
+        SonyHub PWA Asset Generator
+      </div>
+      <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight">App Icon Exporter</h1>
+      <p class="text-sm text-gray-400 max-w-md mx-auto">
+        Renders crisp raster PNG icons from <code class="text-blue-400 font-mono">icon.svg</code> at Apple iOS & Android specifications.
+      </p>
+    </div>
+
+    <!-- Live Preview Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 items-stretch">
+      <!-- 512x512 Master Icon -->
+      <div class="glass-card p-6 flex flex-col items-center justify-between space-y-4">
+        <div>
+          <h3 class="text-base font-bold">512 × 512 px</h3>
+          <p class="text-xs text-gray-400">PWA Splash & Retina Master</p>
+        </div>
+        <div class="p-3 rounded-2xl bg-black/60 border border-white/5 flex items-center justify-center shadow-2xl">
+          <canvas id="canvas-512" width="512" height="512" class="w-36 h-36 rounded-3xl"></canvas>
+        </div>
+        <button
+          onclick="downloadPng('canvas-512', 'icon-512.png')"
+          class="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs tracking-wide transition shadow-lg flex items-center justify-center gap-2"
+        >
+          <span>Download icon-512.png</span>
+        </button>
+      </div>
+
+      <!-- 192x192 Standard Icon -->
+      <div class="glass-card p-6 flex flex-col items-center justify-between space-y-4">
+        <div>
+          <h3 class="text-base font-bold">192 × 192 px</h3>
+          <p class="text-xs text-gray-400">iPhone Home Screen & Launcher</p>
+        </div>
+        <div class="p-3 rounded-2xl bg-black/60 border border-white/5 flex items-center justify-center shadow-2xl">
+          <canvas id="canvas-192" width="192" height="192" class="w-36 h-36 rounded-3xl"></canvas>
+        </div>
+        <button
+          onclick="downloadPng('canvas-192', 'icon-192.png')"
+          class="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs tracking-wide transition shadow-lg flex items-center justify-center gap-2"
+        >
+          <span>Download icon-192.png</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Batch Download Button -->
+    <div class="space-y-4">
+      <button
+        onclick="downloadBoth()"
+        class="py-3 px-8 rounded-full bg-white text-black font-bold text-sm hover:bg-gray-200 transition shadow-xl"
+      >
+        ⬇️ Download Both PNG Icons
+      </button>
+
+      <!-- Step by step instructions banner -->
+      <div class="glass-card p-5 text-left text-xs leading-relaxed space-y-2 border border-white/10">
+        <div class="font-bold text-white flex items-center gap-2">
+          <span>📋</span>
+          <span>Instructions:</span>
+        </div>
+        <ol class="list-decimal list-inside text-gray-300 space-y-1">
+          <li>Click <strong>Download Both PNG Icons</strong> (or download individually).</li>
+          <li>Save or move both <code class="text-blue-400 font-mono">icon-192.png</code> and <code class="text-blue-400 font-mono">icon-512.png</code> into your <code class="text-blue-400 font-mono">sonyhub/</code> folder.</li>
+          <li>Open Safari on iPhone, navigate to SonyHub, tap Share → <strong>Add to Home Screen</strong>.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const svgUrl = './icon.svg';
+
+    function renderIcons() {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        // Render 512x512
+        const c512 = document.getElementById('canvas-512');
+        const ctx512 = c512.getContext('2d');
+        ctx512.clearRect(0, 0, 512, 512);
+        ctx512.drawImage(img, 0, 0, 512, 512);
+
+        // Render 192x192
+        const c192 = document.getElementById('canvas-192');
+        const ctx192 = c192.getContext('2d');
+        ctx192.clearRect(0, 0, 192, 192);
+        ctx192.drawImage(img, 0, 0, 192, 192);
+      };
+      img.src = svgUrl;
+    }
+
+    function downloadPng(canvasId, fileName) {
+      const canvas = document.getElementById(canvasId);
+      const link = document.createElement('a');
+      link.download = fileName;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    function downloadBoth() {
+      downloadPng('canvas-192', 'icon-192.png');
+      setTimeout(() => {
+        downloadPng('canvas-512', 'icon-512.png');
+      }, 350);
+    }
+
+    window.addEventListener('DOMContentLoaded', renderIcons);
+  </script>
+</body>
+</html>

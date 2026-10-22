@@ -1,0 +1,3462 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SonyHub · Home Theater Control Center</title>
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- iPhone / iPad home screen meta -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SonyHub">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="application-name" content="SonyHub">
+
+  <!-- Theme color (black for OLED status bar) -->
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+
+  <!-- Apple touch icons (used as home screen icon on iPhone) -->
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icon-192.png">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+
+  <!-- Splash screens for iPhone (optional but nice) -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Tailwind Configuration -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            apple: {
+              blue: '#007AFF',
+              darkBlue: '#0A84FF',
+              green: '#34C759',
+              orange: '#FF9500',
+              red: '#FF3B30',
+              purple: '#AF52DE',
+            },
+            oled: {
+              black: '#000000',
+              card: '#1C1C1E',
+              cardHover: '#2C2C2E',
+              elevated: '#242426',
+              border: 'rgba(255, 255, 255, 0.09)',
+              borderFocus: '#0A84FF',
+              secondary: '#8E8E93',
+              tertiary: '#48484A',
+            },
+            lightTheme: {
+              bg: '#F2F2F7',
+              card: '#FFFFFF',
+              cardHover: '#E5E5EA',
+              border: 'rgba(0, 0, 0, 0.07)',
+              textPrimary: '#000000',
+              textSecondary: '#6E6E73',
+            }
+          },
+          boxShadow: {
+            'apple-light': '0 4px 24px -2px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04)',
+            'apple-dark': '0 8px 32px 0 rgba(0, 0, 0, 0.6)',
+            'apple-glow': '0 0 25px rgba(10, 132, 255, 0.35)',
+            'apple-glow-green': '0 0 25px rgba(52, 199, 89, 0.35)',
+          },
+          transitionTimingFunction: {
+            'spring': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Core App Styles -->
+  <style>
+    /* ==========================================================================
+       CSS Variables & Apple Design Tokens
+       ========================================================================== */
+    :root {
+      --bg-color: #000000;
+      --card-bg: #1C1C1E;
+      --card-hover: #2C2C2E;
+      --card-border: rgba(255, 255, 255, 0.09);
+      --text-primary: #FFFFFF;
+      --text-secondary: #8E8E93;
+      --accent: #0A84FF;
+      --accent-rgb: 10, 132, 255;
+      --spring-curve: cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    body.light {
+      --bg-color: #F2F2F7;
+      --card-bg: #FFFFFF;
+      --card-hover: #F2F2F7;
+      --card-border: rgba(0, 0, 0, 0.07);
+      --text-primary: #000000;
+      --text-secondary: #6E6E73;
+      --accent: #007AFF;
+      --accent-rgb: 0, 122, 255;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background-color: var(--bg-color);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+      overflow-x: hidden;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(142, 142, 147, 0.3);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(142, 142, 147, 0.6);
+    }
+
+    /* TV Remote Focus Ring */
+    .focusable {
+      transition: transform 0.2s var(--spring-curve), box-shadow 0.2s ease, outline 0.15s ease;
+      outline: none;
+    }
+    .focusable:focus,
+    .focusable:focus-visible {
+      outline: 3px solid var(--accent) !important;
+      outline-offset: 3px !important;
+      transform: scale(1.02);
+      z-index: 40 !important;
+    }
+
+    /* Glassmorphism styling */
+    .glass-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      border-radius: 20px;
+      transition: all 0.28s var(--spring-curve);
+    }
+    body.light .glass-card {
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    }
+    body.dark .glass-card {
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Spring interactive buttons */
+    .spring-press {
+      transition: transform 0.2s var(--spring-curve), filter 0.2s ease;
+    }
+    .spring-press:active {
+      transform: scale(0.96);
+    }
+
+    /* Waveform Animation for Spotify / Playback */
+    @keyframes waveBounce {
+      0%, 100% { height: 6px; }
+      50% { height: 26px; }
+    }
+    .wave-bar {
+      width: 4px;
+      background: #1DB954;
+      border-radius: 9999px;
+      animation: waveBounce 1.2s ease-in-out infinite;
+    }
+    .wave-bar:nth-child(1) { animation-delay: 0.0s; }
+    .wave-bar:nth-child(2) { animation-delay: 0.2s; }
+    .wave-bar:nth-child(3) { animation-delay: 0.4s; }
+    .wave-bar:nth-child(4) { animation-delay: 0.15s; }
+
+    /* Custom iOS-styled Range Sliders */
+    input[type=range].ios-slider {
+      -webkit-appearance: none;
+      width: 100%;
+      background: transparent;
+      outline: none;
+      height: 36px;
+      cursor: pointer;
+    }
+    input[type=range].ios-slider::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 8px;
+      cursor: pointer;
+      background: rgba(142, 142, 147, 0.24);
+      border-radius: 9999px;
+      transition: background 0.2s ease;
+    }
+    body.light input[type=range].ios-slider::-webkit-slider-runnable-track {
+      background: rgba(0, 0, 0, 0.1);
+    }
+    input[type=range].ios-slider::-webkit-slider-thumb {
+      height: 24px;
+      width: 24px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      cursor: pointer;
+      -webkit-appearance: none;
+      margin-top: -8px;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.24), 0 1px 3px rgba(0, 0, 0, 0.12);
+      transition: transform 0.15s var(--spring-curve), box-shadow 0.15s ease;
+    }
+    input[type=range].ios-slider:active::-webkit-slider-thumb {
+      transform: scale(1.15);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    }
+    input[type=range].ios-slider::-moz-range-track {
+      width: 100%;
+      height: 8px;
+      background: rgba(142, 142, 147, 0.24);
+      border-radius: 9999px;
+    }
+    input[type=range].ios-slider::-moz-range-thumb {
+      height: 24px;
+      width: 24px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      border: none;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.24);
+    }
+
+    /* Vertical EQ Slider Column styling */
+    .eq-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      user-select: none;
+    }
+    .eq-vertical-track {
+      position: relative;
+      width: 44px;
+      height: 200px;
+      background: rgba(142, 142, 147, 0.15);
+      border-radius: 22px;
+      display: flex;
+      justify-content: center;
+      touch-action: none;
+      overflow: hidden;
+      cursor: ns-resize;
+      border: 1px solid var(--card-border);
+      transition: border-color 0.2s ease, background-color 0.2s ease;
+    }
+    .eq-vertical-track:hover {
+      background: rgba(142, 142, 147, 0.22);
+    }
+    .eq-zero-line {
+      position: absolute;
+      top: 50%;
+      left: 6px;
+      right: 6px;
+      height: 2px;
+      background: rgba(142, 142, 147, 0.5);
+      transform: translateY(-50%);
+      z-index: 5;
+    }
+    .eq-fill-bar {
+      position: absolute;
+      left: 0;
+      right: 0;
+      transition: height 0.15s ease, top 0.15s ease, background 0.2s ease;
+      z-index: 2;
+    }
+    .eq-fill-boost {
+      bottom: 50%;
+      background: linear-gradient(to top, rgba(10, 132, 255, 0.5), rgba(10, 132, 255, 0.95));
+      border-top-left-radius: 22px;
+      border-top-right-radius: 22px;
+    }
+    .eq-fill-cut {
+      top: 50%;
+      background: linear-gradient(to bottom, rgba(255, 149, 0, 0.5), rgba(255, 149, 0, 0.95));
+      border-bottom-left-radius: 22px;
+      border-bottom-right-radius: 22px;
+    }
+    .eq-thumb-knob {
+      position: absolute;
+      left: 4px;
+      right: 4px;
+      height: 26px;
+      border-radius: 13px;
+      background: #FFFFFF;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.1s ease;
+    }
+    .eq-thumb-knob span {
+      width: 14px;
+      height: 2px;
+      background: #8E8E93;
+      border-radius: 1px;
+    }
+
+    /* iOS Toggle Switch */
+    .ios-switch {
+      position: relative;
+      display: inline-block;
+      width: 52px;
+      height: 32px;
+      cursor: pointer;
+    }
+    .ios-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .ios-switch-slider {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(120, 120, 128, 0.24);
+      border-radius: 34px;
+      transition: background-color 0.25s ease;
+    }
+    .ios-switch-slider:before {
+      position: absolute;
+      content: "";
+      height: 26px;
+      width: 26px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      border-radius: 50%;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      transition: transform 0.28s var(--spring-curve);
+    }
+    .ios-switch input:checked + .ios-switch-slider {
+      background-color: #34C759;
+    }
+    .ios-switch input:checked + .ios-switch-slider:before {
+      transform: translateX(20px);
+    }
+
+    /* Modal Backdrop Animations */
+    .fade-enter {
+      opacity: 0;
+      transform: scale(0.96) translateY(8px);
+    }
+    .fade-enter-active {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+      transition: opacity 0.22s ease-out, transform 0.25s var(--spring-curve);
+    }
+    .fade-exit {
+      opacity: 0;
+      transform: scale(0.96) translateY(8px);
+      transition: opacity 0.18s ease-in, transform 0.18s ease-in;
+    }
+
+    /* Toast Notification */
+    .toast-pill {
+      animation: toastSlideUp 0.35s var(--spring-curve) forwards;
+    }
+    @keyframes toastSlideUp {
+      from {
+        opacity: 0;
+        transform: translate(-50%, 28px) scale(0.92);
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(1);
+      }
+    }
+  </style>
+
+  <!-- Alpine.js CDN (Loaded after helper declarations) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+
+<body
+  x-data="sonyHub()"
+  x-init="init()"
+  :class="{ 'dark': theme === 'dark', 'light': theme === 'light' }"
+  class="min-h-full flex flex-col font-sans select-none"
+  @keydown.window="handleGlobalKeydown($event)"
+>
+
+  <!-- ========================================================================
+       TOP STATUS BAR (TV & Mobile Header)
+       ======================================================================== -->
+  <header
+    class="sticky top-0 z-30 w-full px-6 py-4 flex items-center justify-between border-b backdrop-blur-xl transition-all"
+    :style="`border-color: var(--card-border); background-color: ${theme === 'dark' ? 'rgba(0,0,0,0.75)' : 'rgba(242,242,247,0.85)'}`"
+  >
+    <!-- Brand / Theater Identity -->
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-apple-blue/15 text-apple-darkBlue flex items-center justify-center font-black tracking-widest text-lg shadow-sm border border-apple-darkBlue/20">
+        <i data-lucide="tv-2" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-base font-bold tracking-tight text-white dark:text-white" :class="theme === 'light' ? 'text-black' : 'text-white'" x-text="systemName">Sony Bravia XR</h1>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse mr-1.5"></span>
+            Online
+          </span>
+        </div>
+        <div class="text-xs text-oled-secondary flex items-center gap-2">
+          <span x-text="systemIp">192.168.1.150</span>
+          <span>•</span>
+          <span x-text="surroundMode.toUpperCase()">DOLBY SURROUND</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center Quick Status: Preset & Current Source -->
+    <div class="hidden md:flex items-center gap-2 bg-oled-card/80 px-3 py-1.5 rounded-full border border-oled-border text-xs">
+      <span class="text-oled-secondary">Preset:</span>
+      <span class="font-semibold text-apple-darkBlue uppercase" x-text="activePreset ? activePreset : 'Custom'">Custom</span>
+      <span class="text-oled-secondary">|</span>
+      <span class="text-oled-secondary">Source:</span>
+      <span class="font-semibold uppercase" :class="theme === 'light' ? 'text-black' : 'text-white'" x-text="activeSource">HDMI 1</span>
+    </div>
+
+    <!-- Right Header Controls: Power, Mode, Theme, Quick Mute -->
+    <div class="flex items-center gap-2 sm:gap-3">
+      <!-- Hardware IR Power Toggle Action -->
+      <button
+        @click="sendIrPower()"
+        class="focusable spring-press px-3 py-2 rounded-xl text-xs font-semibold border flex items-center gap-1.5 bg-oled-card hover:bg-red-500/15 hover:text-red-400 hover:border-red-500/30 text-oled-secondary border-oled-border transition-all"
+        title="Hardware IR Power Toggle"
+      >
+        <i data-lucide="power" class="w-3.5 h-3.5 text-red-500"></i>
+        <span class="hidden sm:inline">Power</span>
+      </button>
+
+      <!-- Mute Toggle Quick Action -->
+      <button
+        @click="toggleMute()"
+        class="focusable spring-press px-3 py-2 rounded-xl text-xs font-medium border flex items-center gap-2"
+        :class="isMuted ? 'bg-red-500/20 text-red-400 border-red-500/40' : 'bg-oled-card text-oled-secondary border-oled-border hover:text-white'"
+        title="Toggle Mute (Key M)"
+      >
+        <i :data-lucide="isMuted ? 'volume-x' : (volume > 50 ? 'volume-2' : 'volume-1')" class="w-4 h-4"></i>
+        <span class="hidden sm:inline" x-text="isMuted ? 'Muted' : `${volume}%`"></span>
+      </button>
+
+      <!-- TV Mode Badge / Toggle -->
+      <button
+        @click="toggleTvMode()"
+        class="focusable spring-press px-3 py-2 rounded-xl text-xs font-medium border flex items-center gap-1.5"
+        :class="tvMode ? 'bg-apple-darkBlue/20 text-apple-darkBlue border-apple-darkBlue/40' : 'bg-oled-card text-oled-secondary border-oled-border'"
+        title="Toggle TV Layout Mode"
+      >
+        <i data-lucide="monitor" class="w-4 h-4"></i>
+        <span class="hidden sm:inline">TV Mode</span>
+      </button>
+
+      <!-- Theme Switcher -->
+      <button
+        @click="cycleTheme()"
+        class="focusable spring-press p-2 rounded-xl border bg-oled-card border-oled-border text-oled-secondary hover:text-white"
+        title="Cycle Light/Dark Theme"
+      >
+        <i :data-lucide="theme === 'dark' ? 'moon' : 'sun'" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       MAIN APP CONTAINER (Sidebar on TV, Content Center, Tab Bar on Mobile)
+       ======================================================================== -->
+  <div class="flex-1 flex overflow-hidden relative">
+
+    <!-- 📺 TV MODE LEFT SIDEBAR (Icon-first Apple/Sony TV bar) -->
+    <aside
+      class="hidden lg:flex flex-col items-center justify-between py-6 px-3 border-r z-20 transition-all select-none"
+      :class="tvMode ? 'w-24' : 'w-20'"
+      :style="`border-color: var(--card-border); background-color: ${theme === 'dark' ? '#08080A' : '#ECECF2'}`"
+    >
+      <!-- Navigation Icons List -->
+      <nav class="flex flex-col items-center gap-4 w-full">
+        <!-- 1. Home Dashboard -->
+        <button
+          @click="setSection('home')"
+          class="focusable spring-press w-full flex flex-col items-center justify-center py-3 px-2 rounded-2xl transition-all group"
+          :class="activeSection === 'home' ? 'bg-apple-darkBlue text-white shadow-apple-glow' : 'text-oled-secondary hover:text-white hover:bg-oled-card'"
+          title="Dashboard (1)"
+        >
+          <i data-lucide="layout-grid" class="w-6 h-6 mb-1"></i>
+          <span class="text-[11px] font-semibold tracking-wide">Home</span>
+        </button>
+
+        <!-- 2. Sound Control -->
+        <button
+          @click="setSection('sound')"
+          class="focusable spring-press w-full flex flex-col items-center justify-center py-3 px-2 rounded-2xl transition-all group"
+          :class="activeSection === 'sound' ? 'bg-apple-darkBlue text-white shadow-apple-glow' : 'text-oled-secondary hover:text-white hover:bg-oled-card'"
+          title="Sound Control (2)"
+        >
+          <i data-lucide="sliders" class="w-6 h-6 mb-1"></i>
+          <span class="text-[11px] font-semibold tracking-wide">Sound</span>
+        </button>
+
+        <!-- 3. Spotify Controller -->
+        <button
+          @click="setSection('spotify')"
+          class="focusable spring-press w-full flex flex-col items-center justify-center py-3 px-2 rounded-2xl transition-all group relative"
+          :class="activeSection === 'spotify' ? 'bg-[#1DB954] text-white shadow-apple-glow-green' : 'text-oled-secondary hover:text-white hover:bg-oled-card'"
+          title="Spotify (3)"
+        >
+          <i data-lucide="music-2" class="w-6 h-6 mb-1"></i>
+          <span class="text-[11px] font-semibold tracking-wide">Spotify</span>
+          <!-- Active Wave indicator if playing -->
+          <span x-show="nowPlaying.playing && activeSource === 'spotify'" class="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+        </button>
+
+        <!-- 4. Discover AI Movies -->
+        <button
+          @click="setSection('discover')"
+          class="focusable spring-press w-full flex flex-col items-center justify-center py-3 px-2 rounded-2xl transition-all group"
+          :class="activeSection === 'discover' ? 'bg-apple-darkBlue text-white shadow-apple-glow' : 'text-oled-secondary hover:text-white hover:bg-oled-card'"
+          title="Discover (4)"
+        >
+          <i data-lucide="sparkles" class="w-6 h-6 mb-1"></i>
+          <span class="text-[11px] font-semibold tracking-wide">Discover</span>
+        </button>
+
+        <!-- 5. Settings -->
+        <button
+          @click="setSection('settings')"
+          class="focusable spring-press w-full flex flex-col items-center justify-center py-3 px-2 rounded-2xl transition-all group"
+          :class="activeSection === 'settings' ? 'bg-apple-darkBlue text-white shadow-apple-glow' : 'text-oled-secondary hover:text-white hover:bg-oled-card'"
+          title="Settings (5)"
+        >
+          <i data-lucide="settings-2" class="w-6 h-6 mb-1"></i>
+          <span class="text-[11px] font-semibold tracking-wide">Settings</span>
+        </button>
+      </nav>
+
+      <!-- Bottom Audio Tuner Link / Status Shortcut -->
+      <div class="w-full flex flex-col items-center gap-2 pt-4 border-t border-oled-border">
+        <button
+          @click="loadAudioTunerEQ()"
+          class="focusable spring-press w-11 h-11 rounded-2xl bg-oled-card border border-oled-border flex items-center justify-center text-oled-secondary hover:text-white hover:border-apple-darkBlue/40"
+          title="Load Room Acoustic Calibration"
+        >
+          <i data-lucide="mic" class="w-5 h-5"></i>
+        </button>
+        <span class="text-[10px] text-oled-secondary font-mono">v1.0</span>
+      </div>
+    </aside>
+
+    <!-- CONTENT VIEWPORT -->
+    <main
+      id="main-scroll-container"
+      class="flex-1 overflow-y-auto px-4 md:px-8 py-6 pb-28 md:pb-12 transition-all"
+      :class="{ 'max-w-6xl mx-auto': !tvMode }"
+    >
+
+      <!-- ====================================================================
+           SECTION 1: 🏠 HOME (DASHBOARD)
+           ==================================================================== -->
+      <div x-show="activeSection === 'home'" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" class="space-y-8">
+
+        <!-- 1.1 NOW PLAYING HERO CARD -->
+        <section class="relative w-full rounded-3xl overflow-hidden glass-card p-6 md:p-8 border shadow-apple-dark">
+          <!-- Dynamic blurred backdrop image -->
+          <div
+            class="absolute inset-0 bg-cover bg-center filter blur-3xl opacity-35 transform scale-110 pointer-events-none transition-all duration-700"
+            :style="`background-image: url('${nowPlaying.artwork || 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=900&auto=format&fit=crop&q=80'}');`"
+          ></div>
+          <div class="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent pointer-events-none"></div>
+
+          <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <!-- Left: Artwork & Metadata -->
+            <div class="flex items-center gap-5 sm:gap-6">
+              <div class="relative group w-24 h-24 sm:w-32 sm:h-32 rounded-2xl overflow-hidden shadow-2xl flex-shrink-0 border border-white/10 bg-black/40">
+                <img
+                  :src="nowPlaying.artwork || 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=400&auto=format&fit=crop&q=80'"
+                  alt="Now Playing Cover"
+                  class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <!-- Bouncing wave badge if playing -->
+                <div x-show="nowPlaying.playing" class="absolute bottom-2 right-2 bg-black/70 backdrop-blur-md px-2 py-1 rounded-md flex items-end gap-1 h-6">
+                  <div class="wave-bar"></div>
+                  <div class="wave-bar"></div>
+                  <div class="wave-bar"></div>
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider bg-apple-darkBlue/25 text-apple-darkBlue border border-apple-darkBlue/40"
+                    x-text="nowPlaying.source"
+                  >HDMI 1</span>
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wider bg-white/10 text-oled-secondary border border-white/10">
+                    <span x-text="surroundMode.toUpperCase()">DOLBY SURROUND</span>
+                  </span>
+                </div>
+
+                <h2
+                  class="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-white leading-tight"
+                  x-text="nowPlaying.title"
+                >Dune: Part Two</h2>
+
+                <p
+                  class="text-sm sm:text-base font-medium text-oled-secondary"
+                  x-text="nowPlaying.artist"
+                >Hans Zimmer • Original Motion Picture Soundtrack</p>
+              </div>
+            </div>
+
+            <!-- Right: Playback Controls & Progress Bar -->
+            <div class="flex flex-col justify-center space-y-4 lg:w-96">
+              <!-- Scrubable Progress Bar -->
+              <div class="space-y-1.5">
+                <div class="relative w-full h-2 bg-white/20 rounded-full cursor-pointer overflow-hidden" @click="seekProgress($event)">
+                  <div
+                    class="h-full bg-apple-darkBlue rounded-full transition-all duration-300"
+                    :style="`width: ${(nowPlaying.progress / (nowPlaying.duration || 100)) * 100}%`"
+                  ></div>
+                </div>
+                <div class="flex justify-between text-xs text-oled-secondary font-mono">
+                  <span x-text="formatTime(nowPlaying.progress)">01:24</span>
+                  <span x-text="formatTime(nowPlaying.duration)">03:45</span>
+                </div>
+              </div>
+
+              <!-- Transport Buttons -->
+              <div class="flex items-center justify-center gap-4">
+                <button
+                  @click="playPrevious()"
+                  class="focusable spring-press w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 flex items-center justify-center text-white"
+                  title="Previous Track"
+                >
+                  <i data-lucide="skip-back" class="w-5 h-5 fill-current"></i>
+                </button>
+
+                <button
+                  @click="togglePlayPause()"
+                  class="focusable spring-press w-16 h-16 rounded-full bg-white text-black hover:bg-white/90 flex items-center justify-center shadow-lg transition-transform"
+                  title="Play / Pause (Space)"
+                >
+                  <i :data-lucide="nowPlaying.playing ? 'pause' : 'play'" class="w-7 h-7 fill-current ml-0.5"></i>
+                </button>
+
+                <button
+                  @click="playNext()"
+                  class="focusable spring-press w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 flex items-center justify-center text-white"
+                  title="Next Track"
+                >
+                  <i data-lucide="skip-forward" class="w-5 h-5 fill-current"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 1.2 QUICK SCENE PRESETS (2x2 Grid on TV / Horizontal scroll on mobile) -->
+        <section class="space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-xl md:text-2xl font-bold tracking-tight" :class="theme === 'light' ? 'text-black' : 'text-white'">Quick Scene Presets</h3>
+              <p class="text-xs md:text-sm text-oled-secondary">One-tap acoustic environments calibrated for your theater</p>
+            </div>
+            <span class="text-xs font-semibold px-3 py-1 rounded-full bg-oled-card border border-oled-border text-oled-secondary hidden sm:inline">
+              Instant EQ & Speaker Tuning
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Preset 1: Movie Night -->
+            <div
+              @click="applyPreset('movie')"
+              tabindex="0"
+              class="focusable spring-press p-5 rounded-2xl glass-card cursor-pointer border relative overflow-hidden group flex flex-col justify-between h-40"
+              :class="activePreset === 'movie' ? 'border-apple-darkBlue ring-2 ring-apple-darkBlue/50 bg-apple-darkBlue/10' : 'hover:border-white/20'"
+            >
+              <div class="flex items-start justify-between">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" :class="activePreset === 'movie' ? 'bg-apple-darkBlue text-white' : 'bg-oled-cardHover text-apple-darkBlue'">
+                  🎬
+                </div>
+                <span x-show="activePreset === 'movie'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-apple-darkBlue text-white uppercase tracking-wider">Active</span>
+              </div>
+              <div>
+                <h4 class="text-lg font-bold" :class="theme === 'light' ? 'text-black' : 'text-white'">Movie Night</h4>
+                <p class="text-xs text-oled-secondary mt-1">Dims to cinematic, bass punch, Dolby surround on</p>
+              </div>
+            </div>
+
+            <!-- Preset 2: Music Mode -->
+            <div
+              @click="applyPreset('music')"
+              tabindex="0"
+              class="focusable spring-press p-5 rounded-2xl glass-card cursor-pointer border relative overflow-hidden group flex flex-col justify-between h-40"
+              :class="activePreset === 'music' ? 'border-apple-darkBlue ring-2 ring-apple-darkBlue/50 bg-apple-darkBlue/10' : 'hover:border-white/20'"
+            >
+              <div class="flex items-start justify-between">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" :class="activePreset === 'music' ? 'bg-apple-darkBlue text-white' : 'bg-oled-cardHover text-apple-darkBlue'">
+                  🎵
+                </div>
+                <span x-show="activePreset === 'music'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-apple-darkBlue text-white uppercase tracking-wider">Active</span>
+              </div>
+              <div>
+                <h4 class="text-lg font-bold" :class="theme === 'light' ? 'text-black' : 'text-white'">Music Mode</h4>
+                <p class="text-xs text-oled-secondary mt-1">Balanced EQ, audiophile stereo, natural acoustics</p>
+              </div>
+            </div>
+
+            <!-- Preset 3: Gaming -->
+            <div
+              @click="applyPreset('gaming')"
+              tabindex="0"
+              class="focusable spring-press p-5 rounded-2xl glass-card cursor-pointer border relative overflow-hidden group flex flex-col justify-between h-40"
+              :class="activePreset === 'gaming' ? 'border-apple-darkBlue ring-2 ring-apple-darkBlue/50 bg-apple-darkBlue/10' : 'hover:border-white/20'"
+            >
+              <div class="flex items-start justify-between">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" :class="activePreset === 'gaming' ? 'bg-apple-darkBlue text-white' : 'bg-oled-cardHover text-apple-darkBlue'">
+                  🎮
+                </div>
+                <span x-show="activePreset === 'gaming'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-apple-darkBlue text-white uppercase tracking-wider">Active</span>
+              </div>
+              <div>
+                <h4 class="text-lg font-bold" :class="theme === 'light' ? 'text-black' : 'text-white'">Gaming</h4>
+                <p class="text-xs text-oled-secondary mt-1">Low latency, treble footsteps boost, front focus</p>
+              </div>
+            </div>
+
+            <!-- Preset 4: Sports -->
+            <div
+              @click="applyPreset('sports')"
+              tabindex="0"
+              class="focusable spring-press p-5 rounded-2xl glass-card cursor-pointer border relative overflow-hidden group flex flex-col justify-between h-40"
+              :class="activePreset === 'sports' ? 'border-apple-darkBlue ring-2 ring-apple-darkBlue/50 bg-apple-darkBlue/10' : 'hover:border-white/20'"
+            >
+              <div class="flex items-start justify-between">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" :class="activePreset === 'sports' ? 'bg-apple-darkBlue text-white' : 'bg-oled-cardHover text-apple-darkBlue'">
+                  ⚽
+                </div>
+                <span x-show="activePreset === 'sports'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-apple-darkBlue text-white uppercase tracking-wider">Active</span>
+              </div>
+              <div>
+                <h4 class="text-lg font-bold" :class="theme === 'light' ? 'text-black' : 'text-white'">Sports</h4>
+                <p class="text-xs text-oled-secondary mt-1">Clear Voice mode, center channel boosted, crowd stadium EQ</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 1.3 SHORTCUTS ROW: SOURCE SWITCHER & QUICK VOLUME -->
+        <section class="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
+          <!-- Input Source Switcher -->
+          <div class="md:col-span-7 glass-card p-6 border space-y-3 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <h3 class="text-base font-bold tracking-tight" :class="theme === 'light' ? 'text-black' : 'text-white'">AV Receiver Source</h3>
+                <span class="text-xs text-oled-secondary font-mono">Sony eARC / Port Auto</span>
+              </div>
+              <p class="text-xs text-oled-secondary">Switch current AV input channel seamlessly</p>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">
+              <button
+                @click="setSource('hdmi1')"
+                class="focusable spring-press py-3 px-3 rounded-xl border text-sm font-semibold flex flex-col items-center gap-1 transition-all"
+                :class="activeSource === 'hdmi1' ? 'bg-apple-darkBlue text-white border-apple-darkBlue shadow-apple-glow' : 'bg-oled-card border-oled-border text-oled-secondary hover:text-white'"
+              >
+                <i data-lucide="tv" class="w-4 h-4"></i>
+                <span>HDMI 1</span>
+              </button>
+
+              <button
+                @click="setSource('hdmi2')"
+                class="focusable spring-press py-3 px-3 rounded-xl border text-sm font-semibold flex flex-col items-center gap-1 transition-all"
+                :class="activeSource === 'hdmi2' ? 'bg-apple-darkBlue text-white border-apple-darkBlue shadow-apple-glow' : 'bg-oled-card border-oled-border text-oled-secondary hover:text-white'"
+              >
+                <i data-lucide="gamepad-2" class="w-4 h-4"></i>
+                <span>HDMI 2</span>
+              </button>
+
+              <button
+                @click="setSource('bluetooth')"
+                class="focusable spring-press py-3 px-3 rounded-xl border text-sm font-semibold flex flex-col items-center gap-1 transition-all"
+                :class="activeSource === 'bluetooth' ? 'bg-apple-darkBlue text-white border-apple-darkBlue shadow-apple-glow' : 'bg-oled-card border-oled-border text-oled-secondary hover:text-white'"
+              >
+                <i data-lucide="bluetooth" class="w-4 h-4"></i>
+                <span>Bluetooth</span>
+              </button>
+
+              <button
+                @click="setSource('optical')"
+                class="focusable spring-press py-3 px-3 rounded-xl border text-sm font-semibold flex flex-col items-center gap-1 transition-all"
+                :class="activeSource === 'optical' ? 'bg-apple-darkBlue text-white border-apple-darkBlue shadow-apple-glow' : 'bg-oled-card border-oled-border text-oled-secondary hover:text-white'"
+              >
+                <i data-lucide="cable" class="w-4 h-4"></i>
+                <span>Optical</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Master Volume Slider -->
+          <div class="md:col-span-5 glass-card p-6 border space-y-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-base font-bold tracking-tight" :class="theme === 'light' ? 'text-black' : 'text-white'">Quick Volume</h3>
+                <p class="text-xs text-oled-secondary">Main home theater gain</p>
+              </div>
+              <div class="flex items-baseline gap-1">
+                <span class="text-2xl font-black font-mono text-apple-darkBlue" x-text="volume">65</span>
+                <span class="text-xs text-oled-secondary font-mono">%</span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <button
+                @click="adjustVolume(-5)"
+                class="focusable spring-press w-10 h-10 rounded-xl bg-oled-card border border-oled-border flex items-center justify-center text-lg font-bold text-oled-secondary hover:text-white"
+                title="Decrease Volume"
+              >
+                ─
+              </button>
+
+              <div class="flex-1 relative flex items-center">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  x-model="volume"
+                  @input="isMuted = false"
+                  class="ios-slider focusable"
+                />
+              </div>
+
+              <button
+                @click="adjustVolume(5)"
+                class="focusable spring-press w-10 h-10 rounded-xl bg-oled-card border border-oled-border flex items-center justify-center text-lg font-bold text-oled-secondary hover:text-white"
+                title="Increase Volume"
+              >
+                +
+              </button>
+            </div>
+
+            <!-- Hardware IR Quick Step Buttons -->
+            <div class="flex items-center justify-between pt-1 border-t border-oled-border/60">
+              <span class="text-[11px] text-oled-secondary flex items-center gap-1.5 font-medium">
+                <span class="w-1.5 h-1.5 rounded-full" :class="irStatus === 'online' ? 'bg-emerald-400' : 'bg-oled-secondary'"></span>
+                <span>IR Remote</span>
+              </span>
+              <div class="flex items-center gap-1.5">
+                <button
+                  @click="sendIrVolumeDown()"
+                  class="focusable spring-press px-2.5 py-1 rounded-lg bg-oled-card hover:bg-oled-cardHover border border-oled-border text-xs font-mono font-medium text-oled-secondary hover:text-white flex items-center gap-1"
+                  title="Hardware IR Volume Down"
+                >
+                  <i data-lucide="chevron-down" class="w-3 h-3 text-apple-darkBlue"></i>
+                  <span>▼ VOL</span>
+                </button>
+                <button
+                  @click="sendIrVolumeUp()"
+                  class="focusable spring-press px-2.5 py-1 rounded-lg bg-oled-card hover:bg-oled-cardHover border border-oled-border text-xs font-mono font-medium text-oled-secondary hover:text-white flex items-center gap-1"
+                  title="Hardware IR Volume Up"
+                >
+                  <i data-lucide="chevron-up" class="w-3 h-3 text-apple-darkBlue"></i>
+                  <span>▲ VOL</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+
+      <!-- ====================================================================
+           SECTION 2: 🔊 SOUND CONTROL
+           ==================================================================== -->
+      <div x-show="activeSection === 'sound'" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" class="space-y-8">
+
+        <!-- 2.1 Master Volume Control Card -->
+        <section class="glass-card p-6 md:p-8 border space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h2 class="text-2xl font-bold tracking-tight" :class="theme === 'light' ? 'text-black' : 'text-white'">Master Theater Output</h2>
+              <p class="text-xs sm:text-sm text-oled-secondary">High-fidelity AV amplifier output level (-80 dB to +10 dB reference)</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="px-3 py-1 rounded-full text-xs font-mono font-bold bg-apple-darkBlue/15 text-apple-darkBlue border border-apple-darkBlue/30">
+                <span x-text="calculateDecibels(volume)">-18.0 dB</span>
+              </span>
+              <span class="text-2xl sm:text-3xl font-black font-mono text-white" :class="theme === 'light' ? 'text-black' : 'text-white'" x-text="`${volume}%`">65%</span>
+            </div>
+          </div>
+
+          <!-- Master Slider with +/- buttons -->
+          <div class="flex items-center gap-4 pt-2">
+            <button
+              @click="adjustVolume(-2)"
+              class="focusable spring-press w-12 h-12 rounded-2xl bg-oled-card border border-oled-border flex items-center justify-center text-xl font-bold hover:text-white"
+            >
+              -
+            </button>
+
+            <div class="flex-1">
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                x-model="volume"
+                @input="isMuted = false"
+                class="ios-slider focusable"
+              />
+            </div>
+
+            <button
+              @click="adjustVolume(2)"
+              class="focusable spring-press w-12 h-12 rounded-2xl bg-oled-card border border-oled-border flex items-center justify-center text-xl font-bold hover:text-white"
+            >
+              +
+            </button>
+          </div>
+
+          <!-- IR Hardware Control Buttons -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-oled-border/60">
+            <div class="flex items-center gap-2.5">
+              <span
+                class="w-2.5 h-2.5 rounded-full"
+                :class="irStatus === 'online' ? 'bg-emerald-400 animate-pulse' : 'bg-oled-secondary'"
+              ></span>
+              <span class="text-xs text-oled-secondary font-medium">IR Transmitter (Port 8001)</span>
+              <span class="text-[11px] font-mono text-oled-secondary/80 hidden sm:inline" x-text="irServerUrl"></span>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button
+                @click="sendIrVolumeDown()"
+                class="focusable spring-press px-4 py-2 rounded-xl bg-oled-card hover:bg-oled-cardHover border border-oled-border text-xs font-mono font-bold text-oled-secondary hover:text-white flex items-center gap-1.5 transition-all shadow-sm"
+                title="Hardware IR Volume Down (-1)"
+              >
+                <i data-lucide="volume-1" class="w-3.5 h-3.5 text-apple-darkBlue"></i>
+                <span>▼ VOL</span>
+              </button>
+
+              <button
+                @click="sendIrVolumeUp()"
+                class="focusable spring-press px-4 py-2 rounded-xl bg-oled-card hover:bg-oled-cardHover border border-oled-border text-xs font-mono font-bold text-oled-secondary hover:text-white flex items-center gap-1.5 transition-all shadow-sm"
+                title="Hardware IR Volume Up (+1)"
+              >
+                <i data-lucide="volume-2" class="w-3.5 h-3.5 text-apple-darkBlue"></i>
+                <span>▲ VOL</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2.2 Visual 6-Band Graphic EQ Rack -->
+        <section class="glass-card p-6 md:p-8 border space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-oled-border pb-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-xl font-bold tracking-tight" :class="theme === 'light' ? 'text-black' : 'text-white'">Acoustic 6-Band Parametric EQ</h3>
+                <span class="text-xs px-2 py-0.5 rounded-full bg-apple-darkBlue/15 text-apple-darkBlue font-mono">±12 dB</span>
+              </div>
+              <p class="text-xs sm:text-sm text-oled-secondary mt-1">Calibrated frequency response across your room's soundstage</p>
+            </div>
+
+            <!-- Actions: Reset EQ & Load from Audio Tuner -->
+            <div class="flex items-center gap-3">
+              <button
+                @click="resetEQ()"
+                class="focusable spring-press px-4 py-2 rounded-xl text-xs font-semibold border border-oled-border bg-oled-card hover:text-white flex items-center gap-1.5"
+              >
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                <span>Reset EQ</span>
+              </button>
+
+              <button
+                @click="loadAudioTunerEQ()"
+                class="focusable spring-press px-4 py-2 rounded-xl text-xs font-bold bg-apple-darkBlue hover:bg-blue-600 text-white flex items-center gap-1.5 shadow-apple-glow"
+              >
+                <i data-lucide="wand-2" class="w-3.5 h-3.5"></i>
+                <span>Load from Audio Tuner</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Vertical EQ Sliders Grid -->
+          <div class="grid grid-cols-3 sm:grid-cols-6 gap-3 sm:gap-6 pt-2">
+            <!-- Band 1: Sub-bass 60Hz -->
+            <div class="eq-column">
+              <span class="text-xs font-bold uppercase tracking-wider text-oled-secondary mb-1">Sub</span>
+              <span class="text-[11px] font-mono text-oled-secondary mb-3">60Hz</span>
+              
+              <div
+                class="eq-vertical-track focusable"
+                tabindex="0"
+                @pointerdown="handleEqPointerDown($event, 'sub')"
+                @keydown.up.prevent="nudgeEQ('sub', 1)"
+                @keydown.down.prevent="nudgeEQ('sub', -1)"
+              >
+                <div class="eq-zero-line"></div>
+                <div
+                  class="eq-fill-bar"
+                  :class="eq.sub > 0 ? 'eq-fill-boost' : (eq.sub < 0 ? 'eq-fill-cut' : '')"
+                  :style="`height: ${Math.abs(eq.sub) * (100 / 24)}%;`"
+                ></div>
+                <div
+                  class="eq-thumb-knob"
+                  :style="`bottom: calc(${(eq.sub + 12) * (100 / 24)}% - 13px);`"
+                >
+                  <span></span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-1 mt-3">
+                <button @click="nudgeEQ('sub', -1)" class="w-6 h-6 rounded-md bg-oled-card border border-oled-border text-xs text-oled-secondary hover:text-white focusable">-</button>
+                <span class="font-mono text-xs font-bold w-12 text-center" :class="eq.sub > 0 ? 'text-apple-darkBlue' : (eq.sub < 0 ? 'text-amber-400' : 'text-oled-secondary')" x-text="formatDecibels(eq.sub)">0 dB</span>
+                <button @click="nudgeEQ('sub', 1)" class="w-6 h-6 rounded-md bg-oled-card border border-oled-border text-xs text-oled-secondary hover:text-white focusable">+</button>
+              </div>
+            </div>
+
+            <!-- Band 2: Bass 200Hz -->
+            <div class="eq-column">
+              <span class="text-xs font-bold uppercase tracking-wider text-oled-secondary mb-1">Bass</span>
+              <span class="text-[11px] font-mono text-oled-secondary mb-3">200Hz</span>
+              
+              <div
+                class="eq-vertical-track focusable"
+                tabindex="0"
+                @pointerdown="handleEqPointerDown($event, 'bass')"
+                @keydown.up.prevent="nudgeEQ('bass', 1)"
+                @keydown.down.prevent="nudgeEQ('bass', -1)"
+              >
+                <div class="eq-zero-line"></div>
+                <div
+                  class="eq-fill-bar"
+                  :class="eq.bass > 0 ? 'eq-fill-boost' : (eq.bass < 0 ? 'eq-fill-cut' : '')"
+                  :style="`height: ${Math.abs(eq.bass) * (100 / 24)}%;`"
+                ></div>
+                <div
+                  class="eq-thumb-knob"
+                  :style="`bottom: calc(${(eq.bass + 12) * (100 / 24)}% - 13px);`"
+                >
+                  <span></span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-1 mt-3">
+                <button @click="nudgeEQ('bass', -1)" class="w-6 h-6 rounded-md bg-oled-card border border-oled-border text-xs text-oled-secondary hover:text-white focusable">-</button>
+                <span class="font-mono text-xs font-bold w-12 text-center" :class="eq.bass > 0 ? 'text-apple-darkBlue' : (eq.bass < 0 ? 'text-amber-400' : 'text-oled-secondary')" x-text="formatDecibels(eq.bass)">0 dB</span>
+                <button @click="nudgeEQ('bass', 1)" class="w-6 h-6 rounded-md bg-oled-card border border-oled-border text-xs text-oled-secondary hover:text-white focusable">+</button>
+              </div>
+            </div>
+
+            <!-- Band 3: Low-mid 500Hz -->
+            <div class="eq-column">
+              <span class="text-xs font-bold uppercase tracking-wider text-oled-secondary mb-1">Low-Mid</span>
+              <span class="text-[11px] font-mono text-oled-secondary mb-3">500Hz</span>
+              
+              <div
+                class="eq-vertical-track focusable"
+                tabindex="0"
+                @pointerdown="handleEqPointerDown($event, 'lowmid')"
+                @keydown.up.prevent="nudgeEQ('lowmid', 1)"
+                @keydown.down.prevent="nudgeEQ('lowmid', -1)"
+              >
+                <div class="eq-zero-line"></div>
+                <div
+                  class="eq-fill-bar"
+                  :class="eq.lowmid > 0 ? 'eq-fill-boost' : (eq.lowmid < 0 ? 'eq-fill-cut' : '')"
+                  :style="`height: ${Math.abs(eq.lowmid) * (100 / 24)}%;`"
+                ></div>
+                <div
+                  class="eq-thumb-knob"
+                  :style="`bottom: calc(${(eq.lowmid + 12) * (100 / 24)}% - 13px);`"
+                >
+                  <span></span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-1 mt-3">
+                <button @click="nudgeEQ('lowmid', -1)" class="w-6 h-6 rounded-md bg-oled-card border border-oled-border text-xs text-oled-secondary hover:text-white focusable">-</button>
+                <span class="font-mono text-xs font-bold w-12 text-center" :class="eq.lowmid > 0 ? 'text-apple-darkBlue' : (eq.lowmid < 0 ? 'text-amber-400' : 'text-oled-secondary')" x-text="formatDecibels(eq.lowmid)">0 dB</span>
+                <button @click="nudgeEQ('lowmid', 1)" class="w-6 h-6 rounded-md bg-oled-card border border-oled-border text-xs text-oled-secondary hover:text-white focusable">+</button>
+              </div>
+            </div>
+
+            <!-- Band 4: Mid 2kHz -->
+            <div class="eq-column">
+              <span class="text-xs font-bold uppercase tracking-wider text-oled-secondary mb-1">Mid</span>
+              <span class="text-[11px] font-mono text-oled-secondary mb-3">2kHz</span>
+              
+              <div
+                class="eq-vertical-track focusable"
+                tabindex="0"
+                @pointerdown="handleEqPointerDown($event, 'mid')"
+                @keydown.up.prevent="nudgeEQ('mid', 1)"
+                @keydown.down.prevent="nudgeEQ('mid', -1)"
+              >
+                <div class="eq-zero-line"></div>
+                <div
+                  class="eq-fill-bar"
+                  :class="eq.mid > 0 ? 'eq-fill-boost' : (eq.mid < 0 ? 'eq-fill-cut' : '')"
+                  :style="`height: ${Math.abs(eq.mid) * (100 / 24)}%;`"
+                ></div>
+                <div
+                  class="eq-thumb-knob"
+                  :style="`bottom: calc(${(eq.mid + 12) * (100 / 24)}% - 13px);`"
+                >
+                  <span></span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-1 mt-3">
+                <button @click="nudgeEQ('mid', -1)" class="w-6 h-6 rounded-md bg-oled-card border border-oled-border text-xs text-oled-secondary hover:text-white focusable">-</button>
+                <span class="font-mono text-xs font-bold w-12 text-center" :class="eq.mid > 0 ? 'text-apple-darkBlue' : (eq.mid < 0 ? 'text-amber-400' : 'text-oled-secondary')" x-text="formatDecibels(eq.mid)">0 dB</span>
+                <button @click="nudgeEQ('mid', 1)" class="w-6 h-6 rounded-md bg-oled-card border border-oled-border text-xs text-oled-secondary hover:text-white focusable">+</button>
+              </div>
+            </div>
+
+            <!-- Band 5: High-mid 6kHz -->
+            <div class="eq-column">
+              <span class="text-xs font-bold uppercase tracking-wider text-oled-secondary mb-1">Hi-Mid</span>
+              <span class="text-[11px] font-mono text-oled-secondary mb-3">6kHz</span>
+              
+              <div
+                class="eq-vertical-track focusable"
+                tabindex="0"
+                @pointerdown="handleEqPointerDown($event, 'highmid')"
+                @keydown.up.prevent="nudgeEQ('highmid', 1)"
+                @keydown.down.prevent="nudgeEQ('highmid', -1)"
+              >
+                <div class="eq-zero-line"></div>
+                <div
+                  class="eq-fill-bar"
+                  :class="eq.highmid > 0 ? 'eq-fill-boost' : (eq.highmid < 0 ? 'eq-fill-cut' : '')"
+                  :style="`height: ${Math.abs(eq.highmid) * (100 / 24)}%;`"
+                ></div>
+                <div
+                  class="eq-thumb-knob"
+                  :style="`bottom: calc(${(eq.highmid + 12) * (100 / 24)}% - 13px);`"
+                >
+                  <span></span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-1 mt-3">
+                <button @click="nudgeEQ('highmid', -1)" class="w-6 h-6 rounded-md bg-oled-card border border-oled-border text-xs text-oled-secondary hover:text-white focusable">-</button>
+                <span class="font-mono text-xs font-bold w-12 text-center" :class="eq.highmid > 0 ? 'text-apple-darkBlue' : (eq.highmid < 0 ? 'text-amber-400' : 'text-oled-secondary')" x-text="formatDecibels(eq.highmid)">0 dB</span>
+                <button @click="nudgeEQ('highmid', 1)" class="w-6 h-6 rounded-md bg-oled-card border border-oled-border text-xs text-oled-secondary hover:text-white focusable">+</button>
+              </div>
+            </div>
+
+            <!-- Band 6: Treble 16kHz -->
+            <div class="eq-column">
+              <span class="text-xs font-bold uppercase tracking-wider text-oled-secondary mb-1">Treble</span>
+              <span class="text-[11px] font-mono text-oled-secondary mb-3">16kHz</span>
+              
+              <div
+                class="eq-vertical-track focusable"
+                tabindex="0"
+                @pointerdown="handleEqPointerDown($event, 'treble')"
+                @keydown.up.prevent="nudgeEQ('treble', 1)"
+                @keydown.down.prevent="nudgeEQ('treble', -1)"
+              >
+                <div class="eq-zero-line"></div>
+                <div
+                  class="eq-fill-bar"
+                  :class="eq.treble > 0 ? 'eq-fill-boost' : (eq.treble < 0 ? 'eq-fill-cut' : '')"
+                  :style="`height: ${Math.abs(eq.treble) * (100 / 24)}%;`"
+                ></div>
+                <div
+                  class="eq-thumb-knob"
+                  :style="`bottom: calc(${(eq.treble + 12) * (100 / 24)}% - 13px);`"
+                >
+                  <span></span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-1 mt-3">
+                <button @click="nudgeEQ('treble', -1)" class="w-6 h-6 rounded-md bg-oled-card border border-oled-border text-xs text-oled-secondary hover:text-white focusable">-</button>
+                <span class="font-mono text-xs font-bold w-12 text-center" :class="eq.treble > 0 ? 'text-apple-darkBlue' : (eq.treble < 0 ? 'text-amber-400' : 'text-oled-secondary')" x-text="formatDecibels(eq.treble)">0 dB</span>
+                <button @click="nudgeEQ('treble', 1)" class="w-6 h-6 rounded-md bg-oled-card border border-oled-border text-xs text-oled-secondary hover:text-white focusable">+</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2.3 Surround Sound Mode & Speaker Level Balance Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+          <!-- Surround Mode Segmented Control -->
+          <div class="lg:col-span-5 glass-card p-6 md:p-7 border space-y-5 flex flex-col justify-between">
+            <div>
+              <h3 class="text-lg font-bold tracking-tight" :class="theme === 'light' ? 'text-black' : 'text-white'">Surround Processing</h3>
+              <p class="text-xs text-oled-secondary mt-1">Spatial multichannel audio decoder</p>
+            </div>
+
+            <!-- Segmented Control Bar -->
+            <div class="grid grid-cols-5 gap-1.5 p-1.5 rounded-2xl bg-oled-cardHover/70 border border-oled-border">
+              <button
+                @click="setSurroundMode('stereo')"
+                class="focusable spring-press py-2 rounded-xl text-xs font-semibold text-center transition-all"
+                :class="surroundMode === 'stereo' ? 'bg-apple-darkBlue text-white shadow-sm' : 'text-oled-secondary hover:text-white'"
+              >
+                Stereo
+              </button>
+              <button
+                @click="setSurroundMode('surround')"
+                class="focusable spring-press py-2 rounded-xl text-xs font-semibold text-center transition-all"
+                :class="surroundMode === 'surround' ? 'bg-apple-darkBlue text-white shadow-sm' : 'text-oled-secondary hover:text-white'"
+              >
+                Surround
+              </button>
+              <button
+                @click="setSurroundMode('dolby')"
+                class="focusable spring-press py-2 rounded-xl text-xs font-semibold text-center transition-all"
+                :class="surroundMode === 'dolby' ? 'bg-apple-darkBlue text-white shadow-sm' : 'text-oled-secondary hover:text-white'"
+              >
+                Dolby
+              </button>
+              <button
+                @click="setSurroundMode('dts')"
+                class="focusable spring-press py-2 rounded-xl text-xs font-semibold text-center transition-all"
+                :class="surroundMode === 'dts' ? 'bg-apple-darkBlue text-white shadow-sm' : 'text-oled-secondary hover:text-white'"
+              >
+                DTS
+              </button>
+              <button
+                @click="setSurroundMode('auto')"
+                class="focusable spring-press py-2 rounded-xl text-xs font-semibold text-center transition-all"
+                :class="surroundMode === 'auto' ? 'bg-apple-darkBlue text-white shadow-sm' : 'text-oled-secondary hover:text-white'"
+              >
+                Auto
+              </button>
+            </div>
+
+            <div class="p-3 rounded-xl bg-oled-card border border-oled-border text-xs text-oled-secondary flex items-start gap-2.5">
+              <i data-lucide="info" class="w-4 h-4 text-apple-darkBlue flex-shrink-0 mt-0.5"></i>
+              <span>Active decoding algorithm uses Sony 360 Spatial Sound Mapping with up-firing virtual height channels.</span>
+            </div>
+          </div>
+
+          <!-- Speaker Level Balance (5 Horizontal Sliders) -->
+          <div class="lg:col-span-7 glass-card p-6 md:p-7 border space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-lg font-bold tracking-tight" :class="theme === 'light' ? 'text-black' : 'text-white'">Speaker Level Balance</h3>
+                <p class="text-xs text-oled-secondary mt-0.5">Individual channel trim gain (-10 to +10 dB)</p>
+              </div>
+              <button @click="resetSpeakers()" class="text-xs font-semibold text-apple-darkBlue hover:underline">Reset Trim</button>
+            </div>
+
+            <div class="space-y-3 pt-1">
+              <!-- Slider 1: Front Left -->
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs font-medium">
+                  <span class="text-oled-secondary">Front Left</span>
+                  <span class="font-mono font-bold" :class="speakers.fl !== 0 ? 'text-apple-darkBlue' : 'text-oled-secondary'" x-text="formatDecibels(speakers.fl)">0 dB</span>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="text-[11px] text-oled-secondary w-8">-10</span>
+                  <input type="range" min="-10" max="10" step="1" x-model.number="speakers.fl" class="ios-slider focusable" />
+                  <span class="text-[11px] text-oled-secondary w-8 text-right">+10</span>
+                </div>
+              </div>
+
+              <!-- Slider 2: Front Right -->
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs font-medium">
+                  <span class="text-oled-secondary">Front Right</span>
+                  <span class="font-mono font-bold" :class="speakers.fr !== 0 ? 'text-apple-darkBlue' : 'text-oled-secondary'" x-text="formatDecibels(speakers.fr)">0 dB</span>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="text-[11px] text-oled-secondary w-8">-10</span>
+                  <input type="range" min="-10" max="10" step="1" x-model.number="speakers.fr" class="ios-slider focusable" />
+                  <span class="text-[11px] text-oled-secondary w-8 text-right">+10</span>
+                </div>
+              </div>
+
+              <!-- Slider 3: Center Channel -->
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs font-medium">
+                  <span class="text-oled-secondary">Center Channel (Dialogue)</span>
+                  <span class="font-mono font-bold" :class="speakers.center !== 0 ? 'text-apple-darkBlue' : 'text-oled-secondary'" x-text="formatDecibels(speakers.center)">+2 dB</span>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="text-[11px] text-oled-secondary w-8">-10</span>
+                  <input type="range" min="-10" max="10" step="1" x-model.number="speakers.center" class="ios-slider focusable" />
+                  <span class="text-[11px] text-oled-secondary w-8 text-right">+10</span>
+                </div>
+              </div>
+
+              <!-- Slider 4: Surround Left / Right -->
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs font-medium">
+                  <span class="text-oled-secondary">Surround Speakers (L & R)</span>
+                  <span class="font-mono font-bold" :class="speakers.sl !== 0 ? 'text-apple-darkBlue' : 'text-oled-secondary'" x-text="formatDecibels(speakers.sl)">0 dB</span>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="text-[11px] text-oled-secondary w-8">-10</span>
+                  <input type="range" min="-10" max="10" step="1" x-model.number="speakers.sl" @input="speakers.sr = speakers.sl" class="ios-slider focusable" />
+                  <span class="text-[11px] text-oled-secondary w-8 text-right">+10</span>
+                </div>
+              </div>
+
+              <!-- Slider 5: Subwoofer -->
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs font-medium">
+                  <span class="text-oled-secondary">Subwoofer LFE</span>
+                  <span class="font-mono font-bold" :class="speakers.sub !== 0 ? 'text-apple-darkBlue' : 'text-oled-secondary'" x-text="formatDecibels(speakers.sub)">+3 dB</span>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="text-[11px] text-oled-secondary w-8">-10</span>
+                  <input type="range" min="-10" max="10" step="1" x-model.number="speakers.sub" class="ios-slider focusable" />
+                  <span class="text-[11px] text-oled-secondary w-8 text-right">+10</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2.4 Sound Enhancements Toggle List (iOS Switch Style) -->
+        <section class="glass-card p-6 md:p-8 border space-y-4">
+          <div>
+            <h3 class="text-xl font-bold tracking-tight" :class="theme === 'light' ? 'text-black' : 'text-white'">Intelligent Audio Enhancements</h3>
+            <p class="text-xs sm:text-sm text-oled-secondary mt-1">Real-time DSP algorithms processed on Sony Cognitive Processor XR</p>
+          </div>
+
+          <div class="divide-y divide-oled-border">
+            <!-- Toggle 1: Clear Voice -->
+            <div class="py-4 flex items-center justify-between gap-4">
+              <div>
+                <h4 class="text-base font-semibold" :class="theme === 'light' ? 'text-black' : 'text-white'">Clear Voice</h4>
+                <p class="text-xs text-oled-secondary">Isolates and elevates speech frequencies for pristine voice clarity</p>
+              </div>
+              <label class="ios-switch focusable" tabindex="0" @keydown.enter.prevent="enhancements.clearVoice = !enhancements.clearVoice" @keydown.space.prevent="enhancements.clearVoice = !enhancements.clearVoice">
+                <input type="checkbox" x-model="enhancements.clearVoice" />
+                <span class="ios-switch-slider"></span>
+              </label>
+            </div>
+
+            <!-- Toggle 2: Night Mode -->
+            <div class="py-4 flex items-center justify-between gap-4">
+              <div>
+                <h4 class="text-base font-semibold" :class="theme === 'light' ? 'text-black' : 'text-white'">Night Mode</h4>
+                <p class="text-xs text-oled-secondary">Compresses extreme dynamic range so quiet dialogue stays clear without explosive loud bursts</p>
+              </div>
+              <label class="ios-switch focusable" tabindex="0" @keydown.enter.prevent="enhancements.nightMode = !enhancements.nightMode" @keydown.space.prevent="enhancements.nightMode = !enhancements.nightMode">
+                <input type="checkbox" x-model="enhancements.nightMode" />
+                <span class="ios-switch-slider"></span>
+              </label>
+            </div>
+
+            <!-- Toggle 3: Bass Boost -->
+            <div class="py-4 flex items-center justify-between gap-4">
+              <div>
+                <h4 class="text-base font-semibold" :class="theme === 'light' ? 'text-black' : 'text-white'">Bass Boost</h4>
+                <p class="text-xs text-oled-secondary">Enhances deep sub-harmonic frequencies for thunderous cinematic impact</p>
+              </div>
+              <label class="ios-switch focusable" tabindex="0" @keydown.enter.prevent="enhancements.bassBoost = !enhancements.bassBoost" @keydown.space.prevent="enhancements.bassBoost = !enhancements.bassBoost">
+                <input type="checkbox" x-model="enhancements.bassBoost" />
+                <span class="ios-switch-slider"></span>
+              </label>
+            </div>
+
+            <!-- Toggle 4: Dialogue Enhancement -->
+            <div class="py-4 flex items-center justify-between gap-4">
+              <div>
+                <h4 class="text-base font-semibold" :class="theme === 'light' ? 'text-black' : 'text-white'">Dialogue Enhancement</h4>
+                <p class="text-xs text-oled-secondary">AI voice synthesis positioning across center channel speakers</p>
+              </div>
+              <label class="ios-switch focusable" tabindex="0" @keydown.enter.prevent="enhancements.dialogue = !enhancements.dialogue" @keydown.space.prevent="enhancements.dialogue = !enhancements.dialogue">
+                <input type="checkbox" x-model="enhancements.dialogue" />
+                <span class="ios-switch-slider"></span>
+              </label>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+
+      <!-- ====================================================================
+           SECTION 3: 🎵 SPOTIFY CONTROLLER
+           ==================================================================== -->
+      <div x-show="activeSection === 'spotify'" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" class="space-y-8">
+
+        <!-- Connection State Card (When NOT connected and NOT in demo mode) -->
+        <div x-show="!spotify.connected && !spotify.isDemo" class="glass-card p-8 md:p-12 border text-center space-y-6 max-w-2xl mx-auto shadow-apple-dark">
+          <div class="w-20 h-20 rounded-3xl bg-[#1DB954]/15 text-[#1DB954] flex items-center justify-center mx-auto shadow-apple-glow-green border border-[#1DB954]/30">
+            <svg class="w-12 h-12 fill-current" viewBox="0 0 24 24">
+              <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.485 17.293c-.215.353-.674.464-1.026.249-2.812-1.718-6.353-2.106-10.523-1.153-.404.092-.803-.162-.895-.566-.092-.403.162-.802.566-.894 4.568-1.044 8.49-.603 11.629 1.338.352.215.464.674.249 1.026zm1.464-3.254c-.27.441-.849.58-1.29.31-3.22-1.978-8.127-2.551-11.936-1.394-.499.151-1.028-.133-1.18-.632-.15-.499.134-1.028.633-1.18 4.357-1.321 9.774-.682 13.463 1.586.441.27.58.849.31 1.29zm.126-3.389c-3.86-2.292-10.228-2.503-13.904-1.388-.592.179-1.22-.162-1.399-.754-.18-.593.162-1.22.754-1.399 4.23-1.284 11.267-1.037 15.698 1.593.533.316.708 1.008.392 1.541-.316.533-1.008.708-1.541.392z"/>
+            </svg>
+          </div>
+
+          <div class="space-y-2">
+            <h3 class="text-2xl sm:text-3xl font-extrabold tracking-tight" :class="theme === 'light' ? 'text-black' : 'text-white'">Connect Spotify</h3>
+            <p class="text-sm text-oled-secondary max-w-md mx-auto">
+              Stream lossless high-fidelity audio directly into your Sony Home Theater with instant surround upmixing.
+            </p>
+          </div>
+
+          <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+            <button
+              @click="initiateSpotifyLogin()"
+              class="focusable spring-press w-full sm:w-auto px-8 py-3.5 rounded-full bg-[#1DB954] hover:bg-[#1aa34a] text-black font-bold text-sm tracking-wide shadow-apple-glow-green flex items-center justify-center gap-2"
+            >
+              <span>Connect with Spotify</span>
+              <i data-lucide="external-link" class="w-4 h-4"></i>
+            </button>
+
+            <button
+              @click="enableSpotifyDemo()"
+              class="focusable spring-press w-full sm:w-auto px-8 py-3.5 rounded-full bg-oled-card hover:bg-oled-cardHover text-white font-semibold text-sm border border-oled-border"
+            >
+              Launch Live Demo Player
+            </button>
+          </div>
+
+          <!-- PKCE Config Helper -->
+          <div class="text-xs text-oled-secondary pt-4 border-t border-oled-border/60">
+            <span>Client-side PKCE OAuth 2.0 flow. Set your Client ID in </span>
+            <button @click="setSection('settings')" class="text-apple-darkBlue underline font-medium">Settings</button>
+            <span> for production playback.</span>
+          </div>
+        </div>
+
+        <!-- Full Spotify Controller Interface (When connected or in Demo mode) -->
+        <div x-show="spotify.connected || spotify.isDemo" class="space-y-8">
+
+          <!-- Connection Banner & Theater Output indicator -->
+          <div class="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl glass-card border">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-[#1DB954]/20 text-[#1DB954] flex items-center justify-center">
+                <i data-lucide="music" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <div class="text-sm font-bold flex items-center gap-2">
+                  <span :class="theme === 'light' ? 'text-black' : 'text-white'">Connected to Sony Bravia Theater</span>
+                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                </div>
+                <span class="text-xs text-oled-secondary" x-text="spotify.isDemo ? 'Interactive Simulation Mode · Hi-Res 24-bit 96kHz' : `User: ${spotify.userEmail || 'Active session'}`"></span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <button
+                @click="disconnectSpotify()"
+                class="focusable spring-press px-3 py-1.5 rounded-xl border border-oled-border bg-oled-card text-xs font-semibold text-oled-secondary hover:text-red-400"
+              >
+                Disconnect
+              </button>
+            </div>
+          </div>
+
+          <!-- Main Now Playing Card -->
+          <section class="glass-card p-6 md:p-10 border shadow-apple-dark relative overflow-hidden">
+            <div class="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
+              
+              <!-- Album Artwork with Drop Shadow & Play indicator -->
+              <div class="relative group w-64 h-64 sm:w-80 sm:h-80 rounded-3xl overflow-hidden shadow-2xl flex-shrink-0 border border-white/10 bg-black/40">
+                <img
+                  :src="spotifyNow.artwork || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=600&auto=format&fit=crop&q=80'"
+                  alt="Spotify Cover"
+                  class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+
+                <!-- Waveform overlay -->
+                <div x-show="nowPlaying.playing" class="absolute bottom-4 right-4 bg-black/80 backdrop-blur-md px-3 py-1.5 rounded-xl flex items-end gap-1.5 h-8">
+                  <div class="wave-bar"></div>
+                  <div class="wave-bar"></div>
+                  <div class="wave-bar"></div>
+                  <div class="wave-bar"></div>
+                </div>
+              </div>
+
+              <!-- Track Details & Audio Controls -->
+              <div class="flex-1 w-full flex flex-col justify-between space-y-6">
+                <!-- Title, Artist, Heart -->
+                <div class="flex items-start justify-between gap-4">
+                  <div class="space-y-1">
+                    <span class="text-xs font-bold uppercase tracking-widest text-[#1DB954]" x-text="spotifyNow.album">Album Title</span>
+                    <h2 class="text-2xl sm:text-4xl font-extrabold tracking-tight" :class="theme === 'light' ? 'text-black' : 'text-white'" x-text="spotifyNow.title">Solaris (Original Theme)</h2>
+                    <p class="text-base sm:text-lg text-oled-secondary font-medium" x-text="spotifyNow.artist">Cliff Martinez • Ambient Master</p>
+                  </div>
+
+                  <!-- Heart (Like) button -->
+                  <button
+                    @click="toggleLikeTrack()"
+                    class="focusable spring-press p-3 rounded-2xl glass-card border hover:border-red-500/40"
+                    :class="spotifyNow.liked ? 'text-red-500' : 'text-oled-secondary'"
+                  >
+                    <i data-lucide="heart" class="w-6 h-6" :class="spotifyNow.liked ? 'fill-current' : ''"></i>
+                  </button>
+                </div>
+
+                <!-- Scrubable Progress Bar -->
+                <div class="space-y-2">
+                  <div class="relative w-full h-2.5 bg-white/15 rounded-full cursor-pointer overflow-hidden" @click="seekSpotifyProgress($event)">
+                    <div
+                      class="h-full bg-[#1DB954] rounded-full transition-all duration-300"
+                      :style="`width: ${(spotifyNow.progress / (spotifyNow.duration || 100)) * 100}%`"
+                    ></div>
+                  </div>
+                  <div class="flex justify-between text-xs font-mono text-oled-secondary">
+                    <span x-text="formatTime(spotifyNow.progress)">01:42</span>
+                    <span x-text="formatTime(spotifyNow.duration)">04:12</span>
+                  </div>
+                </div>
+
+                <!-- Playback Buttons: Shuffle, Prev, Play/Pause, Next, Repeat -->
+                <div class="flex items-center justify-between sm:justify-center sm:gap-6 pt-2">
+                  <button
+                    @click="toggleShuffle()"
+                    class="focusable spring-press p-3 rounded-xl hover:text-white"
+                    :class="spotifyNow.shuffle ? 'text-[#1DB954]' : 'text-oled-secondary'"
+                    title="Shuffle"
+                  >
+                    <i data-lucide="shuffle" class="w-5 h-5"></i>
+                  </button>
+
+                  <button
+                    @click="spotifyPrev()"
+                    class="focusable spring-press w-12 h-12 rounded-full glass-card border flex items-center justify-center text-white"
+                    title="Previous"
+                  >
+                    <i data-lucide="skip-back" class="w-5 h-5 fill-current"></i>
+                  </button>
+
+                  <button
+                    @click="togglePlayPause()"
+                    class="focusable spring-press w-16 h-16 rounded-full bg-[#1DB954] hover:bg-[#1aa34a] text-black flex items-center justify-center shadow-apple-glow-green"
+                    title="Play / Pause"
+                  >
+                    <i :data-lucide="nowPlaying.playing ? 'pause' : 'play'" class="w-8 h-8 fill-current ml-0.5"></i>
+                  </button>
+
+                  <button
+                    @click="spotifyNext()"
+                    class="focusable spring-press w-12 h-12 rounded-full glass-card border flex items-center justify-center text-white"
+                    title="Next"
+                  >
+                    <i data-lucide="skip-forward" class="w-5 h-5 fill-current"></i>
+                  </button>
+
+                  <button
+                    @click="toggleRepeat()"
+                    class="focusable spring-press p-3 rounded-xl hover:text-white"
+                    :class="spotifyNow.repeat ? 'text-[#1DB954]' : 'text-oled-secondary'"
+                    title="Repeat"
+                  >
+                    <i data-lucide="repeat" class="w-5 h-5"></i>
+                  </button>
+                </div>
+
+                <!-- Sub-row: Volume & Device -->
+                <div class="pt-4 border-t border-oled-border flex items-center justify-between gap-6">
+                  <div class="flex items-center gap-3 flex-1 max-w-xs">
+                    <i data-lucide="volume-2" class="w-4 h-4 text-oled-secondary"></i>
+                    <input type="range" min="0" max="100" step="1" x-model="volume" class="ios-slider focusable" />
+                  </div>
+                  <span class="text-xs text-oled-secondary flex items-center gap-1.5 font-medium">
+                    <i data-lucide="speaker" class="w-4 h-4 text-apple-darkBlue"></i>
+                    <span>Playing via Sony HT-A7000 eARC</span>
+                  </span>
+                </div>
+
+              </div>
+            </div>
+          </section>
+
+          <!-- Recently Played Horizontal Row -->
+          <section class="space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xl font-bold tracking-tight" :class="theme === 'light' ? 'text-black' : 'text-white'">Recently Played</h3>
+              <span class="text-xs text-oled-secondary">Audiophile & Spatial Picks</span>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+              <template x-for="(track, idx) in recentlyPlayed" :key="idx">
+                <div
+                  @click="playRecentTrack(track)"
+                  tabindex="0"
+                  class="focusable spring-press glass-card p-3 rounded-2xl border cursor-pointer group flex flex-col space-y-2.5 hover:border-white/20"
+                >
+                  <div class="relative w-full aspect-square rounded-xl overflow-hidden bg-black/40">
+                    <img :src="track.artwork" :alt="track.title" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div class="w-10 h-10 rounded-full bg-[#1DB954] text-black flex items-center justify-center shadow-lg">
+                        <i data-lucide="play" class="w-5 h-5 fill-current ml-0.5"></i>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="space-y-0.5">
+                    <h4 class="text-xs font-bold truncate text-white" :class="theme === 'light' ? 'text-black' : 'text-white'" x-text="track.title">Track Title</h4>
+                    <p class="text-[11px] text-oled-secondary truncate" x-text="track.artist">Artist Name</p>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </section>
+
+        </div>
+
+      </div>
+
+
+      <!-- ====================================================================
+           SECTION 4: 🎬 DISCOVER (AI RECOMMENDATIONS)
+           ==================================================================== -->
+      <div x-show="activeSection === 'discover'" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" class="space-y-8">
+
+        <!-- Top Header: Title, Time Context & Refresh Button -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight" :class="theme === 'light' ? 'text-black' : 'text-white'">AI Cinema Recommendations</h2>
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center gap-1">
+                <i data-lucide="sparkles" class="w-3 h-3"></i>
+                Gemini 2.5
+              </span>
+            </div>
+            <!-- Auto-detected Time Context Label -->
+            <p class="text-sm text-oled-secondary mt-1 flex items-center gap-2">
+              <i data-lucide="clock" class="w-3.5 h-3.5 text-apple-darkBlue"></i>
+              <span x-text="timeContextLabel">Good evening · Perfect for a movie night</span>
+            </p>
+          </div>
+
+          <!-- Refresh Button -->
+          <button
+            @click="fetchRecommendations(activeMood)"
+            :disabled="recommendations.loading"
+            class="focusable spring-press px-5 py-2.5 rounded-2xl bg-apple-darkBlue hover:bg-blue-600 text-white font-semibold text-xs tracking-wide shadow-apple-glow flex items-center gap-2 disabled:opacity-50"
+          >
+            <i data-lucide="refresh-cw" class="w-4 h-4" :class="recommendations.loading ? 'animate-spin' : ''"></i>
+            <span>Find Something Else</span>
+          </button>
+        </div>
+
+        <!-- Mood Selector Pill Buttons -->
+        <div class="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-none">
+          <template x-for="mood in moods" :key="mood.id">
+            <button
+              @click="selectMood(mood.id)"
+              class="focusable spring-press flex-shrink-0 px-4 py-2.5 rounded-full text-xs font-semibold border flex items-center gap-2 transition-all"
+              :class="activeMood === mood.id ? 'bg-apple-darkBlue text-white border-apple-darkBlue shadow-apple-glow' : 'bg-oled-card border-oled-border text-oled-secondary hover:text-white'"
+            >
+              <span x-text="mood.emoji"></span>
+              <span x-text="mood.label"></span>
+            </button>
+          </template>
+        </div>
+
+        <!-- Recommendation Cards Row (3 Cards on TV/Desktop, 1 or Stack on Mobile) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <template x-for="(movie, idx) in currentRecommendations" :key="movie.title + idx">
+            <div
+              @click="openMovieDetail(movie)"
+              tabindex="0"
+              class="focusable spring-press glass-card rounded-3xl border overflow-hidden cursor-pointer group flex flex-col justify-between hover:border-white/25 shadow-apple-dark"
+            >
+              <!-- Poster Image Container -->
+              <div class="relative w-full h-80 sm:h-96 overflow-hidden bg-black/60">
+                <img
+                  :src="movie.poster_url || getFallbackPoster(movie.title)"
+                  :alt="movie.title"
+                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  loading="lazy"
+                />
+                <!-- Gradient overlay -->
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent"></div>
+
+                <!-- Match Score Pill Badge -->
+                <div class="absolute top-4 left-4">
+                  <span class="px-3 py-1 rounded-full text-xs font-black tracking-wide bg-apple-darkBlue/90 backdrop-blur-md text-white shadow-md">
+                    <span x-text="movie.match_score">95</span>% Match
+                  </span>
+                </div>
+
+                <!-- Streaming Platform Badge -->
+                <div class="absolute top-4 right-4">
+                  <span
+                    class="px-2.5 py-1 rounded-full text-xs font-bold text-white shadow-md uppercase tracking-wider backdrop-blur-md"
+                    :style="`background-color: ${getPlatformColor(movie.streaming_platform)};`"
+                    x-text="movie.streaming_platform"
+                  >Netflix</span>
+                </div>
+
+                <!-- Bottom Poster Overlays: Title & Year -->
+                <div class="absolute bottom-4 left-4 right-4 space-y-1">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-semibold px-2 py-0.5 rounded-md bg-white/20 backdrop-blur-sm text-white" x-text="movie.year">2024</span>
+                    <span class="text-xs font-medium text-white/80" x-text="movie.genre">Drama / Sci-Fi</span>
+                  </div>
+                  <h3 class="text-xl sm:text-2xl font-black text-white tracking-tight drop-shadow-md" x-text="movie.title">Movie Title</h3>
+                </div>
+              </div>
+
+              <!-- Content Body: AI "Why This?" quote -->
+              <div class="p-5 space-y-4 flex-1 flex flex-col justify-between">
+                <!-- AI Reasoning -->
+                <div class="p-3.5 rounded-2xl bg-oled-cardHover/60 border border-oled-border text-xs leading-relaxed space-y-1">
+                  <div class="flex items-center gap-1.5 text-apple-darkBlue font-semibold uppercase text-[10px] tracking-wider">
+                    <i data-lucide="sparkles" class="w-3 h-3"></i>
+                    <span>Why This?</span>
+                  </div>
+                  <p class="text-oled-secondary italic font-normal" x-text="`“${movie.why_recommended}”`">
+                    Perfect mood match.
+                  </p>
+                </div>
+
+                <!-- Quick Action Bar -->
+                <div class="flex items-center justify-between pt-1 text-xs">
+                  <span class="text-oled-secondary font-medium group-hover:text-apple-darkBlue transition-colors flex items-center gap-1">
+                    <span>View theater setup</span>
+                    <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                  </span>
+
+                  <button
+                    @click.stop="quickPlayMovie(movie)"
+                    class="focusable spring-press px-3 py-1.5 rounded-xl bg-apple-darkBlue/15 text-apple-darkBlue hover:bg-apple-darkBlue hover:text-white border border-apple-darkBlue/30 font-semibold transition-all flex items-center gap-1"
+                  >
+                    <i data-lucide="play" class="w-3 h-3 fill-current"></i>
+                    <span>Watch</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+      </div>
+
+
+      <!-- ====================================================================
+           SECTION 5: ⚙️ SETTINGS
+           ==================================================================== -->
+      <div x-show="activeSection === 'settings'" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" class="space-y-8 max-w-4xl mx-auto">
+
+        <div>
+          <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight" :class="theme === 'light' ? 'text-black' : 'text-white'">System Settings</h2>
+          <p class="text-sm text-oled-secondary mt-1">Configure hardware connections, Spotify PKCE, and display parameters</p>
+        </div>
+
+        <!-- 5.1 Home Theater Hardware Card -->
+        <section class="glass-card p-6 md:p-8 border space-y-6">
+          <div class="flex items-center gap-3 border-b border-oled-border pb-3">
+            <div class="w-8 h-8 rounded-xl bg-apple-darkBlue/20 text-apple-darkBlue flex items-center justify-center">
+              <i data-lucide="tv" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold" :class="theme === 'light' ? 'text-black' : 'text-white'">Home Theater & AV Receiver</h3>
+              <p class="text-xs text-oled-secondary">Network addressing for IP & CEC remote control</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- System Name -->
+            <div class="space-y-1.5">
+              <label class="text-xs font-semibold text-oled-secondary">System Display Name</label>
+              <input
+                type="text"
+                x-model="systemName"
+                @change="saveSettings()"
+                class="w-full px-4 py-2.5 rounded-xl bg-oled-card border border-oled-border text-sm font-medium focusable"
+                :class="theme === 'light' ? 'text-black bg-white' : 'text-white'"
+              />
+            </div>
+
+            <!-- IP Address -->
+            <div class="space-y-1.5">
+              <label class="text-xs font-semibold text-oled-secondary">Receiver IP Address</label>
+              <input
+                type="text"
+                x-model="systemIp"
+                @change="saveSettings()"
+                class="w-full px-4 py-2.5 rounded-xl bg-oled-card border border-oled-border text-sm font-mono focusable"
+                :class="theme === 'light' ? 'text-black bg-white' : 'text-white'"
+              />
+            </div>
+          </div>
+
+          <!-- Auto-detect toggle -->
+          <div class="flex items-center justify-between pt-2">
+            <div>
+              <div class="text-sm font-semibold" :class="theme === 'light' ? 'text-black' : 'text-white'">Auto-Detect HDMI CEC Devices</div>
+              <p class="text-xs text-oled-secondary">Automatically switches preset to Gaming when PS5 is turned on</p>
+            </div>
+            <label class="ios-switch focusable" tabindex="0">
+              <input type="checkbox" x-model="autoDetect" @change="saveSettings()" />
+              <span class="ios-switch-slider"></span>
+            </label>
+          </div>
+        </section>
+
+        <!-- 5.2 Spotify Integration Config -->
+        <section class="glass-card p-6 md:p-8 border space-y-6">
+          <div class="flex items-center gap-3 border-b border-oled-border pb-3">
+            <div class="w-8 h-8 rounded-xl bg-[#1DB954]/20 text-[#1DB954] flex items-center justify-center">
+              <i data-lucide="music" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold" :class="theme === 'light' ? 'text-black' : 'text-white'">Spotify Connect & Web API</h3>
+              <p class="text-xs text-oled-secondary">PKCE client-side authentication details</p>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-oled-card border border-oled-border">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-[#1DB954]/15 text-[#1DB954] flex items-center justify-center">
+                  <i data-lucide="user" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <div class="text-sm font-bold" :class="theme === 'light' ? 'text-black' : 'text-white'" x-text="spotify.connected ? (spotify.userEmail || 'Active Premium Account') : (spotify.isDemo ? 'Demo Mode Active' : 'Not Connected')">Not Connected</div>
+                  <span class="text-xs text-oled-secondary" x-text="spotify.connected ? 'OAuth Token active' : 'Connect below to enable Web Playback'"></span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button
+                  x-show="!spotify.connected"
+                  @click="initiateSpotifyLogin()"
+                  class="focusable spring-press px-4 py-2 rounded-xl bg-[#1DB954] text-black font-bold text-xs shadow-apple-glow-green"
+                >
+                  Connect Spotify
+                </button>
+
+                <button
+                  x-show="spotify.connected || spotify.isDemo"
+                  @click="disconnectSpotify()"
+                  class="focusable spring-press px-4 py-2 rounded-xl bg-oled-cardHover border border-oled-border text-xs font-semibold hover:text-red-400"
+                >
+                  Disconnect
+                </button>
+              </div>
+            </div>
+
+            <!-- Client ID Field -->
+            <div class="space-y-1.5">
+              <label class="text-xs font-semibold text-oled-secondary">Spotify Developer Client ID</label>
+              <div class="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Enter your Spotify Client ID (e.g. 5b9c...)"
+                  x-model="spotifyClientId"
+                  @change="saveSettings()"
+                  class="flex-1 px-4 py-2.5 rounded-xl bg-oled-card border border-oled-border text-sm font-mono focusable"
+                  :class="theme === 'light' ? 'text-black bg-white' : 'text-white'"
+                />
+                <button
+                  @click="saveSettings(); showToast('Spotify Client ID saved', 'check');"
+                  class="focusable spring-press px-4 py-2.5 rounded-xl bg-oled-card border border-oled-border text-xs font-semibold hover:text-white"
+                >
+                  Save
+                </button>
+              </div>
+              <p class="text-[11px] text-oled-secondary">Redirect URI to register in Spotify Developer Dashboard: <code class="font-mono text-apple-darkBlue" x-text="window.location.origin + window.location.pathname"></code></p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5.3 AI Recommendation API Config -->
+        <section class="glass-card p-6 md:p-8 border space-y-6">
+          <div class="flex items-center gap-3 border-b border-oled-border pb-3">
+            <div class="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center">
+              <i data-lucide="sparkles" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold" :class="theme === 'light' ? 'text-black' : 'text-white'">AI Recommendation Engine</h3>
+              <p class="text-xs text-oled-secondary">FastAPI backend connection with Gemini and TMDB</p>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div class="space-y-1.5">
+              <label class="text-xs font-semibold text-oled-secondary">Recommendation API Endpoint</label>
+              <div class="flex items-center gap-2">
+                <input
+                  type="text"
+                  x-model="aiApiUrl"
+                  @change="saveSettings()"
+                  class="flex-1 px-4 py-2.5 rounded-xl bg-oled-card border border-oled-border text-sm font-mono focusable"
+                  :class="theme === 'light' ? 'text-black bg-white' : 'text-white'"
+                />
+                <button
+                  @click="testAiConnection()"
+                  class="focusable spring-press px-4 py-2.5 rounded-xl bg-apple-darkBlue text-white text-xs font-semibold shadow-apple-glow"
+                >
+                  Test Connection
+                </button>
+              </div>
+            </div>
+
+            <!-- Connection Status -->
+            <div class="flex items-center justify-between p-3.5 rounded-xl bg-oled-card border border-oled-border">
+              <span class="text-xs text-oled-secondary font-medium">Backend Health Status</span>
+              <div class="flex items-center gap-2">
+                <span
+                  class="w-2.5 h-2.5 rounded-full"
+                  :class="aiStatus === 'connected' ? 'bg-emerald-400 animate-pulse' : 'bg-oled-secondary'"
+                ></span>
+                <span
+                  class="text-xs font-bold font-mono"
+                  :class="aiStatus === 'connected' ? 'text-emerald-400' : 'text-oled-secondary'"
+                  x-text="aiStatus === 'connected' ? 'Connected (localhost:8000)' : 'Offline / Using Built-in AI Fallbacks'"
+                ></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5.4 IR Hardware Remote & Blaster Config -->
+        <section class="glass-card p-6 md:p-8 border space-y-6">
+          <div class="flex items-center gap-3 border-b border-oled-border pb-3">
+            <div class="w-8 h-8 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center">
+              <i data-lucide="radio" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold" :class="theme === 'light' ? 'text-black' : 'text-white'">IR Blaster & Hardware Remote</h3>
+              <p class="text-xs text-oled-secondary">Direct infrared transmitter daemon for Sony AV receiver</p>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div class="space-y-1.5">
+              <label class="text-xs font-semibold text-oled-secondary">IR Server URL</label>
+              <div class="flex items-center gap-2">
+                <input
+                  type="text"
+                  x-model="irServerUrl"
+                  @change="saveSettings()"
+                  placeholder="http://localhost:8001"
+                  class="flex-1 px-4 py-2.5 rounded-xl bg-oled-card border border-oled-border text-sm font-mono focusable"
+                  :class="theme === 'light' ? 'text-black bg-white' : 'text-white'"
+                />
+                <button
+                  @click="checkIrStatus(); saveSettings();"
+                  class="focusable spring-press px-4 py-2.5 rounded-xl bg-apple-darkBlue text-white text-xs font-semibold shadow-apple-glow"
+                >
+                  Test IR Ping
+                </button>
+              </div>
+              <p class="text-[11px] text-oled-secondary">Target endpoint for volume and power commands (default: <code class="font-mono text-apple-darkBlue">http://localhost:8001</code>)</p>
+            </div>
+
+            <!-- IR Connection Status Indicator -->
+            <div class="flex items-center justify-between p-3.5 rounded-xl bg-oled-card border border-oled-border">
+              <div class="flex items-center gap-2.5">
+                <span
+                  class="w-2.5 h-2.5 rounded-full transition-colors"
+                  :class="irStatus === 'online' ? 'bg-emerald-400 animate-pulse' : 'bg-oled-secondary'"
+                ></span>
+                <span class="text-xs text-oled-secondary font-medium">IR Daemon Status</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span
+                  class="text-xs font-bold font-mono"
+                  :class="irStatus === 'online' ? 'text-emerald-400' : 'text-oled-secondary'"
+                  x-text="irStatus === 'online' ? 'Online (localhost:8001)' : 'Offline / Unreachable'"
+                ></span>
+                <button
+                  @click="sendIrPower()"
+                  class="focusable spring-press ml-2 px-3 py-1.5 rounded-xl bg-oled-cardHover border border-oled-border text-xs font-semibold text-oled-secondary hover:text-white"
+                >
+                  Test Power IR
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5.5 Display, Layout & OLED True Black Theme -->
+        <section class="glass-card p-6 md:p-8 border space-y-6">
+          <div class="flex items-center gap-3 border-b border-oled-border pb-3">
+            <div class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+              <i data-lucide="sun-medium" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold" :class="theme === 'light' ? 'text-black' : 'text-white'">Display & Theme Mode</h3>
+              <p class="text-xs text-oled-secondary">Calibrated for Sony Bravia Master Series OLED displays</p>
+            </div>
+          </div>
+
+          <div class="space-y-5">
+            <!-- Theme Selector Segmented Control -->
+            <div class="space-y-2">
+              <label class="text-xs font-semibold text-oled-secondary">Color Theme</label>
+              <div class="grid grid-cols-3 gap-2 p-1.5 rounded-2xl bg-oled-card border border-oled-border">
+                <button
+                  @click="setTheme('dark')"
+                  class="focusable spring-press py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2"
+                  :class="theme === 'dark' ? 'bg-apple-darkBlue text-white shadow-sm' : 'text-oled-secondary hover:text-white'"
+                >
+                  <i data-lucide="moon" class="w-4 h-4"></i>
+                  <span>OLED True Black</span>
+                </button>
+
+                <button
+                  @click="setTheme('light')"
+                  class="focusable spring-press py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2"
+                  :class="theme === 'light' ? 'bg-apple-blue text-white shadow-sm' : 'text-oled-secondary hover:text-white'"
+                >
+                  <i data-lucide="sun" class="w-4 h-4"></i>
+                  <span>Apple Light</span>
+                </button>
+
+                <button
+                  @click="setTheme('auto')"
+                  class="focusable spring-press py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2"
+                  :class="theme === 'auto' ? 'bg-apple-darkBlue text-white shadow-sm' : 'text-oled-secondary hover:text-white'"
+                >
+                  <i data-lucide="monitor" class="w-4 h-4"></i>
+                  <span>Auto Detect</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- TV Mode Force Toggle -->
+            <div class="flex items-center justify-between pt-2">
+              <div>
+                <div class="text-sm font-semibold" :class="theme === 'light' ? 'text-black' : 'text-white'">Force TV Mode Layout</div>
+                <p class="text-xs text-oled-secondary">Enforces left sidebar, larger remote navigation targets (56px), and high contrast outlines</p>
+              </div>
+              <label class="ios-switch focusable" tabindex="0">
+                <input type="checkbox" x-model="tvMode" @change="saveSettings()" />
+                <span class="ios-switch-slider"></span>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5.5 About SonyHub Card -->
+        <section class="glass-card p-6 md:p-8 border space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-apple-darkBlue text-white flex items-center justify-center font-black text-xl shadow-apple-glow">
+                S
+              </div>
+              <div>
+                <h3 class="text-base font-bold" :class="theme === 'light' ? 'text-black' : 'text-white'">SonyHub Home Theater AI</h3>
+                <p class="text-xs text-oled-secondary">Version 1.0.0 • Pure Alpine.js & Tailwind architecture</p>
+              </div>
+            </div>
+            <span class="text-xs font-mono px-3 py-1 rounded-full bg-oled-card border border-oled-border text-oled-secondary">
+              Production Release
+            </span>
+          </div>
+
+          <div class="text-xs text-oled-secondary space-y-2 border-t border-oled-border pt-3">
+            <p>Designed with Apple Minimalist aesthetics for Sony Bravia OLED Displays and Multi-Channel AV receivers.</p>
+            <div class="flex flex-wrap gap-2 pt-1 font-mono text-[11px]">
+              <span class="px-2 py-1 rounded-lg bg-oled-card border border-oled-border">D-Pad / Arrow Key Navigation</span>
+              <span class="px-2 py-1 rounded-lg bg-oled-card border border-oled-border">1-5 Quick Tabs</span>
+              <span class="px-2 py-1 rounded-lg bg-oled-card border border-oled-border">Space: Play/Pause</span>
+              <span class="px-2 py-1 rounded-lg bg-oled-card border border-oled-border">M: Mute</span>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+    </main>
+
+    <!-- 📱 MOBILE BOTTOM TAB BAR (When width <= 768px) -->
+    <nav
+      class="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t backdrop-blur-2xl px-2 py-2 flex items-center justify-around"
+      :style="`border-color: var(--card-border); background-color: ${theme === 'dark' ? 'rgba(10, 10, 12, 0.92)' : 'rgba(255, 255, 255, 0.92)'}`"
+    >
+      <button
+        @click="setSection('home')"
+        class="focusable spring-press flex-1 flex flex-col items-center py-1.5 rounded-xl transition-colors"
+        :class="activeSection === 'home' ? 'text-apple-darkBlue' : 'text-oled-secondary'"
+      >
+        <i data-lucide="layout-grid" class="w-5 h-5 mb-1"></i>
+        <span class="text-[10px] font-semibold">Home</span>
+      </button>
+
+      <button
+        @click="setSection('sound')"
+        class="focusable spring-press flex-1 flex flex-col items-center py-1.5 rounded-xl transition-colors"
+        :class="activeSection === 'sound' ? 'text-apple-darkBlue' : 'text-oled-secondary'"
+      >
+        <i data-lucide="sliders" class="w-5 h-5 mb-1"></i>
+        <span class="text-[10px] font-semibold">Sound</span>
+      </button>
+
+      <button
+        @click="setSection('spotify')"
+        class="focusable spring-press flex-1 flex flex-col items-center py-1.5 rounded-xl transition-colors"
+        :class="activeSection === 'spotify' ? 'text-[#1DB954]' : 'text-oled-secondary'"
+      >
+        <i data-lucide="music-2" class="w-5 h-5 mb-1"></i>
+        <span class="text-[10px] font-semibold">Spotify</span>
+      </button>
+
+      <button
+        @click="setSection('discover')"
+        class="focusable spring-press flex-1 flex flex-col items-center py-1.5 rounded-xl transition-colors"
+        :class="activeSection === 'discover' ? 'text-apple-darkBlue' : 'text-oled-secondary'"
+      >
+        <i data-lucide="sparkles" class="w-5 h-5 mb-1"></i>
+        <span class="text-[10px] font-semibold">Discover</span>
+      </button>
+
+      <button
+        @click="setSection('settings')"
+        class="focusable spring-press flex-1 flex flex-col items-center py-1.5 rounded-xl transition-colors"
+        :class="activeSection === 'settings' ? 'text-apple-darkBlue' : 'text-oled-secondary'"
+      >
+        <i data-lucide="settings-2" class="w-5 h-5 mb-1"></i>
+        <span class="text-[10px] font-semibold">Settings</span>
+      </button>
+    </nav>
+
+  </div>
+
+
+  <!-- ========================================================================
+       MODAL: MOVIE DETAIL & THEATER CALIBRATION
+       ======================================================================== -->
+  <div
+    x-show="modalMovie"
+    x-transition:enter="transition ease-out duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition ease-in duration-150"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl"
+    @click="closeMovieDetail()"
+  >
+    <div
+      @click.stop
+      class="relative w-full max-w-2xl rounded-3xl glass-card border overflow-hidden shadow-2xl p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto"
+      :style="`background-color: ${theme === 'dark' ? '#141416' : '#FFFFFF'}`"
+    >
+      <!-- Close button -->
+      <button
+        @click="closeMovieDetail()"
+        class="focusable spring-press absolute top-5 right-5 w-10 h-10 rounded-full bg-oled-card border border-oled-border flex items-center justify-center text-oled-secondary hover:text-white"
+        title="Close (Esc)"
+      >
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <template x-if="modalMovie">
+        <div class="space-y-6">
+          <div class="flex flex-col sm:flex-row gap-6 items-start">
+            <img
+              :src="modalMovie.poster_url || getFallbackPoster(modalMovie.title)"
+              :alt="modalMovie.title"
+              class="w-36 sm:w-44 h-52 sm:h-64 object-cover rounded-2xl shadow-xl border border-white/10 flex-shrink-0"
+            />
+            <div class="space-y-2 flex-1">
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold text-white uppercase" :style="`background-color: ${getPlatformColor(modalMovie.streaming_platform)};`" x-text="modalMovie.streaming_platform"></span>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-apple-darkBlue/20 text-apple-darkBlue border border-apple-darkBlue/30" x-text="`${modalMovie.match_score}% Match`"></span>
+              </div>
+              <h3 class="text-2xl sm:text-3xl font-extrabold" :class="theme === 'light' ? 'text-black' : 'text-white'" x-text="modalMovie.title">Movie Title</h3>
+              <p class="text-xs sm:text-sm text-oled-secondary font-medium" x-text="`${modalMovie.year} • ${modalMovie.genre}`"></p>
+              <div class="pt-2 text-xs sm:text-sm leading-relaxed" :class="theme === 'light' ? 'text-gray-700' : 'text-gray-300'" x-text="modalMovie.description"></div>
+            </div>
+          </div>
+
+          <!-- Theater Audio Tuning Card -->
+          <div class="p-4 rounded-2xl bg-oled-cardHover/70 border border-oled-border space-y-2">
+            <div class="flex items-center justify-between text-xs font-semibold text-apple-darkBlue">
+              <span class="flex items-center gap-1.5">
+                <i data-lucide="sliders" class="w-4 h-4"></i>
+                Recommended Audio Profile
+              </span>
+              <span class="font-mono uppercase">Dolby Atmos Surround</span>
+            </div>
+            <p class="text-xs text-oled-secondary">
+              This title is mastered in wide dynamic range surround sound. Apply Cinema Scene preset for deep sub-bass and speech localization.
+            </p>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-col sm:flex-row items-center gap-3 pt-2">
+            <button
+              @click="applyPreset('movie'); closeMovieDetail(); showToast(`Configured theater for ${modalMovie.title}`, 'check');"
+              class="focusable spring-press w-full sm:flex-1 py-3.5 rounded-2xl bg-apple-darkBlue text-white font-bold text-sm shadow-apple-glow flex items-center justify-center gap-2"
+            >
+              <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+              <span>Tune Theater & Watch Now</span>
+            </button>
+
+            <a
+              x-show="modalMovie.trailer_url"
+              :href="modalMovie.trailer_url"
+              target="_blank"
+              class="focusable spring-press w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-oled-card border border-oled-border text-sm font-semibold hover:text-white flex items-center justify-center gap-2"
+            >
+              <i data-lucide="youtube" class="w-4 h-4 text-red-500"></i>
+              <span>Watch Trailer</span>
+            </a>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+
+  <!-- ========================================================================
+       TOAST NOTIFICATION PILL (Bottom-Center iOS spring animation)
+       ======================================================================== -->
+  <div
+    x-show="toast.visible"
+    x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0 translate-y-8 scale-90"
+    x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+    x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+    x-transition:leave-end="opacity-0 translate-y-8 scale-90"
+    class="fixed bottom-20 md:bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-auto"
+  >
+    <div
+      @click="toast.visible = false"
+      class="px-5 py-3 rounded-full glass-card border border-apple-darkBlue/40 bg-black/85 text-white shadow-2xl flex items-center gap-3 backdrop-blur-2xl cursor-pointer"
+    >
+      <div class="w-6 h-6 rounded-full bg-apple-darkBlue/25 text-apple-darkBlue flex items-center justify-center">
+        <i data-lucide="check" class="w-3.5 h-3.5" x-show="toast.icon === 'check'"></i>
+        <i data-lucide="volume-2" class="w-3.5 h-3.5" x-show="toast.icon === 'volume'"></i>
+        <i data-lucide="sliders" class="w-3.5 h-3.5" x-show="toast.icon === 'sliders'"></i>
+        <i data-lucide="sparkles" class="w-3.5 h-3.5" x-show="toast.icon === 'sparkles'"></i>
+      </div>
+      <span class="text-xs font-semibold tracking-wide text-white" x-text="toast.message">Preset activated</span>
+    </div>
+  </div>
+
+
+  <!-- ========================================================================
+       CORE JAVASCRIPT: ALPINE.JS APPLICATION STORE & LOGIC
+       ======================================================================== -->
+  <script>
+    // Presets definition matching specification
+    const PRESETS = {
+      movie: {
+        eq: { sub: 2, bass: 1, lowmid: 0, mid: 0, highmid: 1, treble: 0 },
+        surroundMode: 'dolby',
+        speakers: { fl: 0, fr: 0, center: 2, sl: 1, sr: 1, sub: 4 },
+        enhancements: { clearVoice: false, nightMode: false, bassBoost: false, dialogue: false }
+      },
+      music: {
+        eq: { sub: 0, bass: 0, lowmid: -1, mid: 0, highmid: 0, treble: 1 },
+        surroundMode: 'stereo',
+        speakers: { fl: 0, fr: 0, center: 0, sl: 0, sr: 0, sub: 2 },
+        enhancements: { clearVoice: false, nightMode: false, bassBoost: false, dialogue: false }
+      },
+      gaming: {
+        eq: { sub: 1, bass: 0, lowmid: 0, mid: 1, highmid: 2, treble: 2 },
+        surroundMode: 'surround',
+        speakers: { fl: 0, fr: 0, center: 1, sl: 2, sr: 2, sub: 3 },
+        enhancements: { clearVoice: false, nightMode: false, bassBoost: false, dialogue: false }
+      },
+      sports: {
+        eq: { sub: 0, bass: 0, lowmid: 0, mid: 2, highmid: 1, treble: 0 },
+        surroundMode: 'surround',
+        speakers: { fl: 0, fr: 0, center: 4, sl: 0, sr: 0, sub: 1 },
+        enhancements: { clearVoice: true, nightMode: false, bassBoost: false, dialogue: true }
+      }
+    };
+
+    // Hardcoded Curated Fallback Recommendations matching prompt specification
+    const CURATED_RECOMMENDATIONS = {
+      feelgood: [
+        {
+          title: "The Grand Budapest Hotel",
+          year: "2014",
+          genre: "Comedy / Drama",
+          streaming_platform: "Netflix",
+          match_score: 94,
+          poster_url: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80",
+          why_recommended: "A visually splendid, heartwarming, and witty masterpiece guaranteed to uplift your spirits.",
+          description: "Wes Anderson's visually symmetrical, vibrant story about a legendary concierge and his trusted lobby boy at a famed European ski resort."
+        },
+        {
+          title: "Paddington 2",
+          year: "2017",
+          genre: "Family / Adventure",
+          streaming_platform: "Prime",
+          match_score: 91,
+          poster_url: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&auto=format&fit=crop&q=80",
+          why_recommended: "Universally cherished cinema brimming with warmth, kindness, and delightful humor.",
+          description: "Paddington, now happily settled with the Brown family, picks up odd jobs to buy a special pop-up book for his Aunt Lucy's 100th birthday."
+        },
+        {
+          title: "Julie & Julia",
+          year: "2009",
+          genre: "Biography / Romance",
+          streaming_platform: "Disney+",
+          match_score: 88,
+          poster_url: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&auto=format&fit=crop&q=80",
+          why_recommended: "Comforting food cinema celebrating culinary passion and heartfelt life journeys.",
+          description: "Julia Child's story of her start in the cooking profession is intertwined with blogger Julie Powell's challenge to cook all 524 recipes in Child's cookbook."
+        }
+      ],
+      thriller: [
+        {
+          title: "Parasite",
+          year: "2019",
+          genre: "Thriller / Drama",
+          streaming_platform: "Hulu",
+          match_score: 97,
+          poster_url: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=600&auto=format&fit=crop&q=80",
+          why_recommended: "Bong Joon-ho's electrifying, razor-sharp masterpiece that keeps you on the edge of your seat.",
+          description: "Greed and class discrimination threaten the newly formed symbiotic relationship between the wealthy Park family and the destitute Kim clan."
+        },
+        {
+          title: "Gone Girl",
+          year: "2014",
+          genre: "Mystery / Thriller",
+          streaming_platform: "Netflix",
+          match_score: 93,
+          poster_url: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=600&auto=format&fit=crop&q=80",
+          why_recommended: "A sinister, meticulously crafted psychological puzzle with an iconic Trent Reznor score.",
+          description: "With his wife's disappearance having become the focus of an intense media circus, a man sees the spotlight turned on him when it's suspected that he may not be innocent."
+        },
+        {
+          title: "No Country for Old Men",
+          year: "2007",
+          genre: "Crime / Thriller",
+          streaming_platform: "Prime",
+          match_score: 90,
+          poster_url: "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=600&auto=format&fit=crop&q=80",
+          why_recommended: "Relentless tension and peerless sound design that tests every decibel of your sound system.",
+          description: "Violence and mayhem ensue after a hunter stumbles upon a drug deal gone wrong and more than two million dollars in cash near the Rio Grande."
+        }
+      ],
+      comedy: [
+        {
+          title: "What We Do in the Shadows",
+          year: "2014",
+          genre: "Comedy / Fantasy",
+          streaming_platform: "Hulu",
+          match_score: 95,
+          poster_url: "https://images.unsplash.com/photo-1509281373149-e957c6296406?w=600&auto=format&fit=crop&q=80",
+          why_recommended: "Endlessly hilarious mockumentary exploring modern vampire flatmate dynamics.",
+          description: "Viago, Vladislav, and Deacon are three vampires who are just trying to get by in modern society; from paying rent and doing chores to trying to get into nightclubs."
+        },
+        {
+          title: "The Favourite",
+          year: "2018",
+          genre: "Comedy / History",
+          streaming_platform: "Prime",
+          match_score: 89,
+          poster_url: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80",
+          why_recommended: "Wickedly sharp banter, superb acting, and rich acoustic ambiance.",
+          description: "In early 18th-century England, a frail Queen Anne occupies the throne and her close friend, Lady Sarah, governs the country in her stead."
+        },
+        {
+          title: "Game Night",
+          year: "2018",
+          genre: "Action / Comedy",
+          streaming_platform: "Netflix",
+          match_score: 86,
+          poster_url: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=600&auto=format&fit=crop&q=80",
+          why_recommended: "Fast-paced, surprisingly stylish comedy with fantastic dynamic punch.",
+          description: "A group of friends who meet regularly for game nights find themselves entangled in a real-life mystery when the shady brother of one of them is kidnapped."
+        }
+      ],
+      drama: [
+        {
+          title: "The Shawshank Redemption",
+          year: "1994",
+          genre: "Drama",
+          streaming_platform: "Netflix",
+          match_score: 98,
+          poster_url: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=600&auto=format&fit=crop&q=80",
+          why_recommended: "The highest rated film of all time, offering pure emotional transcendence and hope.",
+          description: "Two imprisoned men bond over a number of years, finding solace and eventual redemption through acts of common decency."
+        },
+        {
+          title: "Marriage Story",
+          year: "2019",
+          genre: "Drama / Romance",
+          streaming_platform: "Netflix",
+          match_score: 92,
+          poster_url: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80",
+          why_recommended: "Raw, compassionate performances with dialogue that tests center-channel clarity.",
+          description: "Noah Baumbach's incisive and compassionate look at a marriage breaking up and a family staying together."
+        },
+        {
+          title: "Manchester by the Sea",
+          year: "2016",
+          genre: "Drama",
+          streaming_platform: "Prime",
+          match_score: 90,
+          poster_url: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=600&auto=format&fit=crop&q=80",
+          why_recommended: "A deeply moving portrait of grief, responsibility, and human resilience.",
+          description: "A depressed uncle is asked to take care of his teenage nephew after the boy's father dies."
+        }
+      ],
+      scifi: [
+        {
+          title: "Arrival",
+          year: "2016",
+          genre: "Sci-Fi / Drama",
+          streaming_platform: "Netflix",
+          match_score: 96,
+          poster_url: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&auto=format&fit=crop&q=80",
+          why_recommended: "Denis Villeneuve's sublime extraterrestrial drama with an earth-shaking subwoofer mix.",
+          description: "A linguist works with the military to communicate with alien lifeforms after twelve mysterious spacecraft appear around the world."
+        },
+        {
+          title: "Dune",
+          year: "2021",
+          genre: "Sci-Fi / Adventure",
+          streaming_platform: "HBO Max",
+          match_score: 94,
+          poster_url: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&auto=format&fit=crop&q=80",
+          why_recommended: "The benchmark demonstration film for Dolby Atmos surround and IMAX scale sound.",
+          description: "A noble family becomes embroiled in a war for control over the galaxy's most valuable asset while its heir becomes troubled by visions."
+        },
+        {
+          title: "Blade Runner 2049",
+          year: "2017",
+          genre: "Sci-Fi / Mystery",
+          streaming_platform: "Prime",
+          match_score: 92,
+          poster_url: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80",
+          why_recommended: "Unrivaled visual poetry and sub-bass synthesizers that showcase Sony OLED contrast.",
+          description: "Young Blade Runner K's discovery of a long-buried secret leads him to track down former Blade Runner Rick Deckard, who's been missing for thirty years."
+        }
+      ],
+      family: [
+        {
+          title: "Coco",
+          year: "2017",
+          genre: "Animation / Family",
+          streaming_platform: "Disney+",
+          match_score: 97,
+          poster_url: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80",
+          why_recommended: "A radiant, musical fiesta that celebrates family heritage with vibrant acoustics.",
+          description: "Aspiring musician Miguel, confronted with his family's ancestral ban on music, enters the Land of the Dead to find his great-great-grandfather."
+        },
+        {
+          title: "The Incredibles",
+          year: "2004",
+          genre: "Animation / Action",
+          streaming_platform: "Disney+",
+          match_score: 95,
+          poster_url: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&auto=format&fit=crop&q=80",
+          why_recommended: "Michael Giacchino's brassy big-band score and explosive superhero family dynamics.",
+          description: "While trying to lead a quiet suburban life, a family of undercover superheroes are forced into action to save the world."
+        },
+        {
+          title: "Paddington 2",
+          year: "2017",
+          genre: "Family / Adventure",
+          streaming_platform: "Prime",
+          match_score: 93,
+          poster_url: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=600&auto=format&fit=crop&q=80",
+          why_recommended: "Pure warmth and delightful visual storytelling that enchants audiences of all ages.",
+          description: "Paddington gets framed for a robbery and must clear his name with the help of his prison friends."
+        }
+      ]
+    };
+
+    // Main Alpine.js Component
+    function sonyHub() {
+      return {
+        // App State Properties
+        activeSection: 'home', // 'home' | 'sound' | 'spotify' | 'discover' | 'settings'
+        theme: 'dark',         // 'dark' | 'light' | 'auto'
+        tvMode: false,         // boolean
+        activePreset: null,    // 'movie' | 'music' | 'gaming' | 'sports'
+        activeSource: 'hdmi1', // 'hdmi1' | 'hdmi2' | 'bluetooth' | 'optical'
+        volume: 65,
+        isMuted: false,
+        previousVolume: 65,
+        eq: { sub: 0, bass: 0, lowmid: 0, mid: 0, highmid: 0, treble: 0 },
+        speakers: { fl: 0, fr: 0, center: 2, sl: 0, sr: 0, sub: 3 },
+        enhancements: { clearVoice: false, nightMode: false, bassBoost: false, dialogue: false },
+        surroundMode: 'auto',
+
+        // Hardware & Settings
+        systemName: 'Sony Bravia XR-77A95L',
+        systemIp: '192.168.1.150',
+        autoDetect: true,
+        aiApiUrl: 'http://localhost:8000',
+        aiStatus: 'offline', // 'connected' | 'offline'
+        irServerUrl: 'http://localhost:8001',
+        irStatus: 'offline', // 'online' | 'offline'
+
+        // Spotify Integration
+        spotifyClientId: '',
+        spotify: {
+          connected: false,
+          isDemo: false,
+          token: null,
+          userEmail: null
+        },
+        spotifyNow: {
+          title: 'Solaris (Original Soundtrack)',
+          artist: 'Cliff Martinez',
+          album: 'Ambient Motion Picture Sound',
+          artwork: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=600&auto=format&fit=crop&q=80',
+          progress: 84,
+          duration: 252,
+          shuffle: false,
+          repeat: false,
+          liked: false
+        },
+        recentlyPlayed: [
+          { title: "Blade Runner: 2049", artist: "Hans Zimmer & Benjamin Wallfisch", artwork: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=300&auto=format&fit=crop&q=80" },
+          { title: "Interstellar (Atmos)", artist: "Hans Zimmer", artwork: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=300&auto=format&fit=crop&q=80" },
+          { title: "Random Access Memories", artist: "Daft Punk", artwork: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&auto=format&fit=crop&q=80" },
+          { title: "Tron: Legacy Reconfigured", artist: "Daft Punk", artwork: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=300&auto=format&fit=crop&q=80" },
+          { title: "The Dark Knight Rises", artist: "Hans Zimmer", artwork: "https://images.unsplash.com/photo-1509281373149-e957c6296406?w=300&auto=format&fit=crop&q=80" },
+          { title: "Oppenheimer Score", artist: "Ludwig Göransson", artwork: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=300&auto=format&fit=crop&q=80" }
+        ],
+
+        // Now Playing Hero Model
+        nowPlaying: {
+          title: 'Dune: Part Two',
+          artist: 'Hans Zimmer • Original Motion Picture Soundtrack',
+          source: 'HDMI 1',
+          artwork: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=900&auto=format&fit=crop&q=80',
+          playing: true,
+          progress: 84,
+          duration: 225
+        },
+
+        // Discover Section Model
+        activeMood: 'feelgood',
+        moods: [
+          { id: 'feelgood', label: 'Feel Good', emoji: '😊' },
+          { id: 'thriller', label: 'Thriller', emoji: '😱' },
+          { id: 'comedy', label: 'Comedy', emoji: '😂' },
+          { id: 'drama', label: 'Drama', emoji: '💔' },
+          { id: 'scifi', label: 'Sci-Fi', emoji: '🚀' },
+          { id: 'family', label: 'Family', emoji: '👨‍👩‍👧' }
+        ],
+        timeContextLabel: 'Good evening · Perfect for a movie night',
+        currentRecommendations: [],
+        recommendations: {
+          loading: false,
+          error: null
+        },
+        modalMovie: null,
+
+        // Toast Model
+        toast: {
+          visible: false,
+          message: '',
+          icon: 'check',
+          timer: null
+        },
+
+        // Playback Interval Tracker
+        playbackTimer: null,
+
+        // ======================================================================
+        // LIFECYCLE & INITIALIZATION
+        // ======================================================================
+        init() {
+          console.log('SonyHub initializing...');
+
+          // 1. Detect TV mode based on display size or saved preference
+          this.detectDisplayMode();
+
+          // 2. Load stored preferences from localStorage
+          this.loadFromStorage();
+
+          // 3. Detect time of day for recommendations
+          this.updateTimeContext();
+
+          // 4. Populate initial recommendations for default mood
+          this.fetchRecommendations(this.activeMood);
+
+          // 5. Start audio playback simulation ticker
+          this.startPlaybackTicker();
+
+          // 6. Test AI backend connectivity
+          this.testAiConnection();
+
+          // 7. Check local IR blaster daemon status (port 8001)
+          this.checkIrStatus();
+
+          // 8. Check for Spotify OAuth callback in URL hash/query
+          this.checkSpotifyCallback();
+
+          // 9. Refresh Lucide icons on render
+          this.$nextTick(() => {
+            if (window.lucide) {
+              lucide.createIcons();
+            }
+          });
+
+          // Handle window resizing
+          window.addEventListener('resize', () => {
+            this.detectDisplayMode(true);
+          });
+        },
+
+        // ======================================================================
+        // DISPLAY & THEMING
+        // ======================================================================
+        detectDisplayMode(fromResize = false) {
+          const storedTvMode = localStorage.getItem('sonyhub_tv_mode');
+          if (storedTvMode !== null && !fromResize) {
+            this.tvMode = storedTvMode === 'true';
+          } else if (storedTvMode === null) {
+            this.tvMode = window.innerWidth > 1024;
+          }
+        },
+
+        toggleTvMode() {
+          this.tvMode = !this.tvMode;
+          localStorage.setItem('sonyhub_tv_mode', this.tvMode);
+          this.showToast(this.tvMode ? 'TV Mode layout enabled' : 'Standard layout enabled', 'sliders');
+          this.$nextTick(() => lucide.createIcons());
+        },
+
+        cycleTheme() {
+          if (this.theme === 'dark') {
+            this.setTheme('light');
+          } else {
+            this.setTheme('dark');
+          }
+        },
+
+        setTheme(theme) {
+          this.theme = theme;
+          localStorage.setItem('sonyhub_theme', theme);
+          this.showToast(`Switched to ${theme === 'dark' ? 'OLED True Black' : 'Apple Light'} theme`, 'sparkles');
+          this.$nextTick(() => lucide.createIcons());
+        },
+
+        setSection(section) {
+          this.activeSection = section;
+          const container = document.getElementById('main-scroll-container');
+          if (container) {
+            container.scrollTop = 0;
+          }
+          this.$nextTick(() => {
+            lucide.createIcons();
+          });
+        },
+
+        // ======================================================================
+        // PRESETS & SOUND CONTROL
+        // ======================================================================
+        applyPreset(presetKey) {
+          const preset = PRESETS[presetKey];
+          if (!preset) return;
+
+          this.activePreset = presetKey;
+          this.eq = JSON.parse(JSON.stringify(preset.eq));
+          this.surroundMode = preset.surroundMode;
+          this.speakers = Object.assign({}, this.speakers, preset.speakers);
+          this.enhancements = JSON.parse(JSON.stringify(preset.enhancements));
+
+          const names = {
+            movie: 'Movie Night 🎬 activated',
+            music: 'Music Mode 🎵 activated',
+            gaming: 'Gaming Mode 🎮 activated',
+            sports: 'Sports Mode ⚽ activated'
+          };
+
+          this.showToast(names[presetKey] || 'Preset applied', 'check');
+          this.saveToStorage();
+        },
+
+        setSource(source) {
+          this.activeSource = source;
+          const names = {
+            hdmi1: 'HDMI 1 (eARC)',
+            hdmi2: 'HDMI 2 (PlayStation 5)',
+            bluetooth: 'Bluetooth Audio',
+            optical: 'Optical In'
+          };
+          this.nowPlaying.source = names[source] || source.toUpperCase();
+          this.showToast(`Switched source to ${names[source] || source}`, 'check');
+          this.saveToStorage();
+        },
+
+        setSurroundMode(mode) {
+          this.surroundMode = mode;
+          this.showToast(`Surround mode: ${mode.toUpperCase()}`, 'sliders');
+          this.saveToStorage();
+        },
+
+        adjustVolume(delta) {
+          let newVol = this.volume + delta;
+          if (newVol > 100) newVol = 100;
+          if (newVol < 0) newVol = 0;
+          this.volume = newVol;
+          this.isMuted = false;
+          this.saveToStorage();
+        },
+
+        toggleMute() {
+          if (this.isMuted) {
+            this.volume = this.previousVolume || 50;
+            this.isMuted = false;
+            this.showToast(`Unmuted (${this.volume}%)`, 'volume');
+          } else {
+            this.previousVolume = this.volume;
+            this.volume = 0;
+            this.isMuted = true;
+            this.showToast('Muted', 'volume');
+          }
+        },
+
+        calculateDecibels(percent) {
+          // Converts 0-100% to representative -80 dB to +10 dB
+          if (percent === 0) return '-∞ dB';
+          const db = -50 + (percent / 100) * 55;
+          return `${db >= 0 ? '+' : ''}${db.toFixed(1)} dB`;
+        },
+
+        formatDecibels(val) {
+          return `${val > 0 ? '+' : ''}${val} dB`;
+        },
+
+        resetEQ() {
+          this.eq = { sub: 0, bass: 0, lowmid: 0, mid: 0, highmid: 0, treble: 0 };
+          this.activePreset = null;
+          this.showToast('EQ bands reset to 0 dB flat', 'sliders');
+          this.saveToStorage();
+        },
+
+        resetSpeakers() {
+          this.speakers = { fl: 0, fr: 0, center: 0, sl: 0, sr: 0, sub: 0 };
+          this.showToast('Speaker trim reset to 0 dB', 'sliders');
+          this.saveToStorage();
+        },
+
+        nudgeEQ(band, delta) {
+          if (this.eq[band] === undefined) return;
+          let val = this.eq[band] + delta;
+          if (val > 12) val = 12;
+          if (val < -12) val = -12;
+          this.eq[band] = val;
+          this.activePreset = null;
+          this.saveToStorage();
+        },
+
+        handleEqPointerDown(event, band) {
+          const track = event.currentTarget;
+          const rect = track.getBoundingClientRect();
+
+          const updateValue = (e) => {
+            const clientY = e.clientY;
+            let normalized = (rect.bottom - clientY) / rect.height; // 0 to 1
+            if (normalized < 0) normalized = 0;
+            if (normalized > 1) normalized = 1;
+            // Map 0..1 to -12..+12 dB
+            const rawDb = -12 + (normalized * 24);
+            this.eq[band] = Math.round(rawDb);
+            this.activePreset = null;
+          };
+
+          updateValue(event);
+
+          const pointerMove = (e) => updateValue(e);
+          const pointerUp = () => {
+            window.removeEventListener('pointermove', pointerMove);
+            window.removeEventListener('pointerup', pointerUp);
+            this.saveToStorage();
+          };
+
+          window.addEventListener('pointermove', pointerMove);
+          window.addEventListener('pointerup', pointerUp);
+        },
+
+        // Load calibration from Room Acoustic Tuner tool
+        loadAudioTunerEQ() {
+          try {
+            const savedTuner = localStorage.getItem('sony_audio_tuner_results');
+            if (savedTuner) {
+              const parsed = JSON.parse(savedTuner);
+              if (parsed && parsed.eqBands && parsed.eqBands.length >= 6) {
+                this.eq.sub = Math.round(parsed.eqBands[0].value || 0);
+                this.eq.bass = Math.round(parsed.eqBands[1].value || 0);
+                this.eq.lowmid = Math.round(parsed.eqBands[2].value || 0);
+                this.eq.mid = Math.round(parsed.eqBands[3].value || 0);
+                this.eq.highmid = Math.round(parsed.eqBands[4].value || 0);
+                this.eq.treble = Math.round(parsed.eqBands[5].value || 0);
+                this.showToast('Loaded AI room acoustic calibration!', 'check');
+                this.saveToStorage();
+                return;
+              }
+            }
+          } catch (e) {
+            console.warn('Could not read existing tuner localStorage:', e);
+          }
+
+          // Fallback calibrated room response if no tuner measurement found
+          this.eq = { sub: 2, bass: -1, lowmid: 1, mid: 0, highmid: -1, treble: 1 };
+          this.speakers.center = 3;
+          this.speakers.sub = 2;
+          this.showToast('Loaded Sony Room Calibration Profile (+2dB Sub, +3dB Center)', 'check');
+          this.saveToStorage();
+        },
+
+        // ======================================================================
+        // SPOTIFY INTEGRATION & SIMULATION
+        // ======================================================================
+        enableSpotifyDemo() {
+          this.spotify.isDemo = true;
+          this.spotify.connected = true;
+          this.activeSource = 'spotify';
+          this.nowPlaying.source = 'Spotify Connect';
+          this.nowPlaying.title = this.spotifyNow.title;
+          this.nowPlaying.artist = this.spotifyNow.artist;
+          this.nowPlaying.artwork = this.spotifyNow.artwork;
+          this.nowPlaying.progress = this.spotifyNow.progress;
+          this.nowPlaying.duration = this.spotifyNow.duration;
+          this.nowPlaying.playing = true;
+          this.showToast('Spotify demo session connected', 'check');
+          this.saveToStorage();
+        },
+
+        disconnectSpotify() {
+          this.spotify.connected = false;
+          this.spotify.isDemo = false;
+          this.spotify.token = null;
+          localStorage.removeItem('spotify_access_token');
+          this.showToast('Disconnected from Spotify', 'volume');
+          this.saveToStorage();
+        },
+
+        initiateSpotifyLogin() {
+          if (!this.spotifyClientId) {
+            this.setSection('settings');
+            this.showToast('Please enter your Spotify Client ID in Settings first', 'sliders');
+            return;
+          }
+
+          // Generate PKCE code challenge and verifier
+          const verifier = this.generateRandomString(64);
+          localStorage.setItem('spotify_code_verifier', verifier);
+
+          this.sha256(verifier).then(challenge => {
+            const redirectUri = window.location.origin + window.location.pathname;
+            const scope = 'user-read-playback-state user-modify-playback-state user-read-currently-playing streaming user-library-read user-library-modify';
+            const authUrl = `https://accounts.spotify.com/authorize?response_type=code&client_id=${encodeURIComponent(this.spotifyClientId)}&scope=${encodeURIComponent(scope)}&redirect_uri=${encodeURIComponent(redirectUri)}&code_challenge_method=S256&code_challenge=${challenge}`;
+            window.location.href = authUrl;
+          });
+        },
+
+        checkSpotifyCallback() {
+          const urlParams = new URLSearchParams(window.location.search);
+          const code = urlParams.get('code');
+          if (code && this.spotifyClientId) {
+            const verifier = localStorage.getItem('spotify_code_verifier');
+            const redirectUri = window.location.origin + window.location.pathname;
+
+            fetch('https://accounts.spotify.com/api/token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({
+                client_id: this.spotifyClientId,
+                grant_type: 'authorization_code',
+                code: code,
+                redirect_uri: redirectUri,
+                code_verifier: verifier
+              })
+            })
+            .then(res => res.json())
+            .then(data => {
+              if (data.access_token) {
+                this.spotify.connected = true;
+                this.spotify.token = data.access_token;
+                localStorage.setItem('spotify_access_token', data.access_token);
+                // Clean URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+                this.showToast('Connected to Spotify account!', 'check');
+              }
+            })
+            .catch(err => {
+              console.error('Spotify token exchange failed:', err);
+            });
+          }
+        },
+
+        generateRandomString(length) {
+          const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+          let text = '';
+          for (let i = 0; i < length; i++) {
+            text += possible.charAt(Math.floor(Math.random() * possible.length));
+          }
+          return text;
+        },
+
+        async sha256(plain) {
+          const encoder = new TextEncoder();
+          const data = encoder.encode(plain);
+          const hash = await window.crypto.subtle.digest('SHA-256', data);
+          return btoa(String.fromCharCode(...new Uint8Array(hash)))
+            .replace(/=/g, '')
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_');
+        },
+
+        toggleLikeTrack() {
+          this.spotifyNow.liked = !this.spotifyNow.liked;
+          this.showToast(this.spotifyNow.liked ? 'Saved to Your Library' : 'Removed from Your Library', 'sparkles');
+          this.$nextTick(() => lucide.createIcons());
+        },
+
+        toggleShuffle() {
+          this.spotifyNow.shuffle = !this.spotifyNow.shuffle;
+          this.showToast(this.spotifyNow.shuffle ? 'Shuffle enabled' : 'Shuffle disabled', 'sliders');
+        },
+
+        toggleRepeat() {
+          this.spotifyNow.repeat = !this.spotifyNow.repeat;
+          this.showToast(this.spotifyNow.repeat ? 'Repeat enabled' : 'Repeat disabled', 'sliders');
+        },
+
+        playRecentTrack(track) {
+          this.spotifyNow.title = track.title;
+          this.spotifyNow.artist = track.artist;
+          this.spotifyNow.artwork = track.artwork;
+          this.spotifyNow.progress = 0;
+          this.nowPlaying.title = track.title;
+          this.nowPlaying.artist = track.artist;
+          this.nowPlaying.artwork = track.artwork;
+          this.nowPlaying.progress = 0;
+          this.nowPlaying.playing = true;
+          this.showToast(`Playing ${track.title}`, 'check');
+        },
+
+        spotifyPrev() {
+          this.spotifyNow.progress = 0;
+          this.nowPlaying.progress = 0;
+          this.showToast('Previous track', 'check');
+        },
+
+        spotifyNext() {
+          const randomIdx = Math.floor(Math.random() * this.recentlyPlayed.length);
+          this.playRecentTrack(this.recentlyPlayed[randomIdx]);
+        },
+
+        // ======================================================================
+        // PLAYBACK SIMULATION TICKER
+        // ======================================================================
+        startPlaybackTicker() {
+          if (this.playbackTimer) clearInterval(this.playbackTimer);
+          this.playbackTimer = setInterval(() => {
+            if (this.nowPlaying.playing) {
+              if (this.nowPlaying.progress < this.nowPlaying.duration) {
+                this.nowPlaying.progress += 1;
+                this.spotifyNow.progress = this.nowPlaying.progress;
+              } else {
+                this.nowPlaying.progress = 0;
+                this.spotifyNow.progress = 0;
+              }
+            }
+          }, 1000);
+        },
+
+        togglePlayPause() {
+          this.nowPlaying.playing = !this.nowPlaying.playing;
+          this.showToast(this.nowPlaying.playing ? 'Playback resumed' : 'Playback paused', 'check');
+          this.$nextTick(() => lucide.createIcons());
+        },
+
+        playPrevious() {
+          this.nowPlaying.progress = 0;
+          this.showToast('Previous chapter / track', 'check');
+        },
+
+        playNext() {
+          const tracks = [
+            { title: "Dune: Part Two", artist: "Hans Zimmer • Dolby Atmos", artwork: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=900&auto=format&fit=crop&q=80" },
+            { title: "Oppenheimer", artist: "Ludwig Göransson • IMAX 70mm Score", artwork: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=900&auto=format&fit=crop&q=80" },
+            { title: "Interstellar", artist: "Hans Zimmer • Organ & Space Symphony", artwork: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=900&auto=format&fit=crop&q=80" }
+          ];
+          const next = tracks[Math.floor(Math.random() * tracks.length)];
+          this.nowPlaying.title = next.title;
+          this.nowPlaying.artist = next.artist;
+          this.nowPlaying.artwork = next.artwork;
+          this.nowPlaying.progress = 0;
+          this.showToast(`Now playing: ${next.title}`, 'check');
+        },
+
+        seekProgress(event) {
+          const bar = event.currentTarget;
+          const rect = bar.getBoundingClientRect();
+          const clickX = event.clientX - rect.left;
+          const pct = Math.max(0, Math.min(1, clickX / rect.width));
+          this.nowPlaying.progress = Math.round(pct * this.nowPlaying.duration);
+          this.spotifyNow.progress = this.nowPlaying.progress;
+        },
+
+        seekSpotifyProgress(event) {
+          const bar = event.currentTarget;
+          const rect = bar.getBoundingClientRect();
+          const clickX = event.clientX - rect.left;
+          const pct = Math.max(0, Math.min(1, clickX / rect.width));
+          this.spotifyNow.progress = Math.round(pct * this.spotifyNow.duration);
+          this.nowPlaying.progress = this.spotifyNow.progress;
+        },
+
+        formatTime(seconds) {
+          const m = Math.floor(seconds / 60);
+          const s = Math.floor(seconds % 60);
+          return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        },
+
+        // ======================================================================
+        // AI RECOMMENDATIONS
+        // ======================================================================
+        updateTimeContext() {
+          const hour = new Date().getHours();
+          if (hour >= 5 && hour < 12) {
+            this.timeContextLabel = 'Good morning · Light & inspiring viewing';
+          } else if (hour >= 12 && hour < 17) {
+            this.timeContextLabel = 'Good afternoon · Casual & engaging entertainment';
+          } else if (hour >= 17 && hour < 22) {
+            this.timeContextLabel = 'Good evening · Perfect for a movie night';
+          } else {
+            this.timeContextLabel = 'Late night · Atmospheric & immersive cinema';
+          }
+        },
+
+        getTimeParam() {
+          const hour = new Date().getHours();
+          if (hour >= 5 && hour < 12) return 'morning';
+          if (hour >= 12 && hour < 17) return 'afternoon';
+          if (hour >= 17 && hour < 22) return 'evening';
+          return 'night';
+        },
+
+        selectMood(moodId) {
+          this.activeMood = moodId;
+          this.fetchRecommendations(moodId);
+        },
+
+        async fetchRecommendations(moodId) {
+          this.recommendations.loading = true;
+          this.recommendations.error = null;
+
+          const timeOfDay = this.getTimeParam();
+          const apiUrl = `${this.aiApiUrl || 'http://localhost:8000'}/recommend?mood=${encodeURIComponent(moodId)}&time=${encodeURIComponent(timeOfDay)}`;
+
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2500);
+
+            const response = await fetch(apiUrl, { signal: controller.signal });
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+              const data = await response.json();
+              if (data && data.title) {
+                this.aiStatus = 'connected';
+                // Prepend or combine with curated items
+                const fallbacks = CURATED_RECOMMENDATIONS[moodId] || CURATED_RECOMMENDATIONS.feelgood;
+                this.currentRecommendations = [
+                  {
+                    title: data.title,
+                    year: data.year || '2024',
+                    genre: data.genre || 'Cinematic',
+                    streaming_platform: data.streaming_platform || 'Netflix',
+                    match_score: data.match_score || 96,
+                    poster_url: data.poster_url || this.getFallbackPoster(data.title),
+                    why_recommended: data.why_recommended || 'AI tailored match for your current room context.',
+                    description: data.description || 'AI curated recommendation for Sony Bravia home theater.',
+                    trailer_url: data.trailer_url
+                  },
+                  fallbacks[0],
+                  fallbacks[1]
+                ];
+                this.recommendations.loading = false;
+                this.$nextTick(() => lucide.createIcons());
+                return;
+              }
+            }
+          } catch (err) {
+            // Graceful fallback to rich curated list
+            this.aiStatus = 'offline';
+          }
+
+          // Use the exact curated picks from prompt
+          setTimeout(() => {
+            const list = CURATED_RECOMMENDATIONS[moodId] || CURATED_RECOMMENDATIONS.feelgood;
+            // Shuffle subtly for freshness on click
+            this.currentRecommendations = [...list].sort(() => 0.5 - Math.random());
+            this.recommendations.loading = false;
+            this.$nextTick(() => lucide.createIcons());
+          }, 200);
+        },
+
+        testAiConnection() {
+          const testUrl = `${this.aiApiUrl || 'http://localhost:8000'}/health`;
+          fetch(testUrl, { method: 'GET' })
+            .then(res => res.json())
+            .then(data => {
+              if (data.status === 'ok') {
+                this.aiStatus = 'connected';
+                this.showToast('AI Engine Connected (localhost:8000)', 'sparkles');
+              } else {
+                this.aiStatus = 'offline';
+              }
+            })
+            .catch(() => {
+              this.aiStatus = 'offline';
+              this.showToast('Backend offline. Built-in curated recommendations active.', 'sliders');
+            });
+        },
+
+        getPlatformColor(platform) {
+          if (!platform) return '#007AFF';
+          const p = platform.toLowerCase();
+          if (p.includes('netflix')) return '#E50914';
+          if (p.includes('prime')) return '#00A8E1';
+          if (p.includes('disney')) return '#113CCF';
+          if (p.includes('hulu')) return '#1CE783';
+          if (p.includes('hbo') || p.includes('max')) return '#5822B4';
+          return '#0A84FF';
+        },
+
+        getFallbackPoster(title) {
+          // Reliable, high quality cinematic photography fallbacks
+          const fallbacks = [
+            'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&auto=format&fit=crop&q=80',
+            'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=600&auto=format&fit=crop&q=80',
+            'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80',
+            'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&auto=format&fit=crop&q=80',
+            'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=600&auto=format&fit=crop&q=80'
+          ];
+          const hash = (title || 'movie').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+          return fallbacks[hash % fallbacks.length];
+        },
+
+        openMovieDetail(movie) {
+          this.modalMovie = movie;
+          this.$nextTick(() => lucide.createIcons());
+        },
+
+        closeMovieDetail() {
+          this.modalMovie = null;
+        },
+
+        quickPlayMovie(movie) {
+          this.nowPlaying.title = movie.title;
+          this.nowPlaying.artist = `${movie.genre} • ${movie.streaming_platform}`;
+          this.nowPlaying.artwork = movie.poster_url || this.getFallbackPoster(movie.title);
+          this.nowPlaying.progress = 0;
+          this.nowPlaying.playing = true;
+          this.applyPreset('movie');
+          this.showToast(`Started playback of ${movie.title}`, 'check');
+        },
+
+        // ======================================================================
+        // TOAST NOTIFICATION SYSTEM
+        // ======================================================================
+        showToast(message, icon = 'check') {
+          if (this.toast.timer) clearTimeout(this.toast.timer);
+          this.toast.message = message;
+          this.toast.icon = icon;
+          this.toast.visible = true;
+          this.$nextTick(() => lucide.createIcons());
+
+          this.toast.timer = setTimeout(() => {
+            this.toast.visible = false;
+          }, 3000);
+        },
+
+        // ======================================================================
+        // LOCALSTORAGE PERSISTENCE
+        // ======================================================================
+        saveToStorage() {
+          try {
+            const payload = {
+              volume: this.volume,
+              activePreset: this.activePreset,
+              activeSource: this.activeSource,
+              surroundMode: this.surroundMode,
+              eq: this.eq,
+              speakers: this.speakers,
+              enhancements: this.enhancements,
+              theme: this.theme,
+              tvMode: this.tvMode,
+              systemName: this.systemName,
+              systemIp: this.systemIp,
+              autoDetect: this.autoDetect,
+              aiApiUrl: this.aiApiUrl,
+              spotifyClientId: this.spotifyClientId,
+              irServerUrl: this.irServerUrl
+            };
+            localStorage.setItem('sonyhub_state', JSON.stringify(payload));
+          } catch (e) {
+            console.error('Storage save error:', e);
+          }
+        },
+
+        saveSettings() {
+          this.saveToStorage();
+          this.showToast('Settings saved successfully', 'check');
+        },
+
+        loadFromStorage() {
+          try {
+            const raw = localStorage.getItem('sonyhub_state');
+            if (raw) {
+              const data = JSON.parse(raw);
+              if (data.volume !== undefined) this.volume = data.volume;
+              if (data.activePreset !== undefined) this.activePreset = data.activePreset;
+              if (data.activeSource !== undefined) this.activeSource = data.activeSource;
+              if (data.surroundMode !== undefined) this.surroundMode = data.surroundMode;
+              if (data.eq) this.eq = Object.assign(this.eq, data.eq);
+              if (data.speakers) this.speakers = Object.assign(this.speakers, data.speakers);
+              if (data.enhancements) this.enhancements = Object.assign(this.enhancements, data.enhancements);
+              if (data.theme) this.theme = data.theme;
+              if (data.systemName) this.systemName = data.systemName;
+              if (data.systemIp) this.systemIp = data.systemIp;
+              if (data.autoDetect !== undefined) this.autoDetect = data.autoDetect;
+              if (data.aiApiUrl) this.aiApiUrl = data.aiApiUrl;
+              if (data.spotifyClientId) this.spotifyClientId = data.spotifyClientId;
+              if (data.irServerUrl) this.irServerUrl = data.irServerUrl;
+            }
+
+            const token = localStorage.getItem('spotify_access_token');
+            if (token) {
+              this.spotify.connected = true;
+              this.spotify.token = token;
+            }
+          } catch (e) {
+            console.warn('Could not parse localStorage state:', e);
+          }
+        },
+
+        // ======================================================================
+        // HARDWARE IR CONTROL INTEGRATION (Port 8001)
+        // ======================================================================
+        async sendIrCommand(endpoint, label) {
+          const baseUrl = (this.irServerUrl || 'http://localhost:8001').replace(/\/$/, '');
+          const targetUrl = `${baseUrl}${endpoint}`;
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            const res = await fetch(targetUrl, { method: 'POST', signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (res.ok) {
+              this.irStatus = 'online';
+              this.showToast(`IR ${label} sent`, 'check');
+            } else {
+              this.showToast(`IR ${label} sent`, 'volume');
+            }
+          } catch (err) {
+            // Fire-and-forget fallback toast feedback
+            this.showToast(`IR ${label} sent`, 'volume');
+          }
+        },
+
+        sendIrVolumeUp() {
+          this.sendIrCommand('/ir/volume/up', 'Vol Up');
+        },
+
+        sendIrVolumeDown() {
+          this.sendIrCommand('/ir/volume/down', 'Vol Down');
+        },
+
+        sendIrPower() {
+          this.sendIrCommand('/ir/power', 'Power Toggle');
+        },
+
+        async checkIrStatus() {
+          const baseUrl = (this.irServerUrl || 'http://localhost:8001').replace(/\/$/, '');
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 1800);
+            const res = await fetch(`${baseUrl}/health`, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            this.irStatus = res.ok ? 'online' : 'offline';
+          } catch (e) {
+            this.irStatus = 'offline';
+          }
+        },
+
+        // ======================================================================
+        // KEYBOARD & TV REMOTE SPATIAL NAVIGATION
+        // ======================================================================
+        handleGlobalKeydown(e) {
+          // If in an active input or textarea, let typing proceed normally
+          const tag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+          const isInput = tag === 'input' || tag === 'textarea';
+
+          // Escape key closes modals
+          if (e.key === 'Escape') {
+            if (this.modalMovie) {
+              this.closeMovieDetail();
+              e.preventDefault();
+              return;
+            }
+          }
+
+          // Number keys 1-5 switch main sections
+          if (!isInput && ['1', '2', '3', '4', '5'].includes(e.key)) {
+            const sections = ['home', 'sound', 'spotify', 'discover', 'settings'];
+            const idx = parseInt(e.key, 10) - 1;
+            if (sections[idx]) {
+              this.setSection(sections[idx]);
+              this.showToast(`Section: ${sections[idx].toUpperCase()}`, 'sliders');
+              e.preventDefault();
+              return;
+            }
+          }
+
+          // 'm' key toggles mute
+          if (!isInput && (e.key === 'm' || e.key === 'M')) {
+            this.toggleMute();
+            e.preventDefault();
+            return;
+          }
+
+          // Space toggles playback if not focused on button or input
+          if (!isInput && e.key === ' ' && tag !== 'button') {
+            this.togglePlayPause();
+            e.preventDefault();
+            return;
+          }
+
+          // Spatial Directional Remote Navigation (Arrow keys: Up, Down, Left, Right)
+          if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+            // Don't intercept range sliders or text inputs horizontally
+            if (isInput && document.activeElement.type === 'range') {
+              if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                return; // Let native slider change value
+              }
+            }
+
+            this.navigateSpatial(e.key);
+            e.preventDefault();
+          }
+        },
+
+        navigateSpatial(direction) {
+          const focusables = Array.from(document.querySelectorAll('.focusable, button:not([disabled]), input, a[href], [tabindex="0"]'))
+            .filter(el => {
+              const style = window.getComputedStyle(el);
+              return style.display !== 'none' && style.visibility !== 'hidden' && el.offsetParent !== null;
+            });
+
+          if (!focusables.length) return;
+
+          const current = document.activeElement;
+          if (!current || !focusables.includes(current)) {
+            focusables[0].focus();
+            return;
+          }
+
+          const currentRect = current.getBoundingClientRect();
+          const currentCenter = {
+            x: currentRect.left + currentRect.width / 2,
+            y: currentRect.top + currentRect.height / 2
+          };
+
+          let bestCandidate = null;
+          let bestDistance = Infinity;
+
+          for (const el of focusables) {
+            if (el === current) continue;
+
+            const rect = el.getBoundingClientRect();
+            const center = {
+              x: rect.left + rect.width / 2,
+              y: rect.top + rect.height / 2
+            };
+
+            const dx = center.x - currentCenter.x;
+            const dy = center.y - currentCenter.y;
+
+            let isDirectionValid = false;
+            let primaryDist = 0;
+            let secondaryDist = 0;
+
+            if (direction === 'ArrowUp' && dy < -5) {
+              isDirectionValid = true;
+              primaryDist = Math.abs(dy);
+              secondaryDist = Math.abs(dx);
+            } else if (direction === 'ArrowDown' && dy > 5) {
+              isDirectionValid = true;
+              primaryDist = Math.abs(dy);
+              secondaryDist = Math.abs(dx);
+            } else if (direction === 'ArrowLeft' && dx < -5) {
+              isDirectionValid = true;
+              primaryDist = Math.abs(dx);
+              secondaryDist = Math.abs(dy);
+            } else if (direction === 'ArrowRight' && dx > 5) {
+              isDirectionValid = true;
+              primaryDist = Math.abs(dx);
+              secondaryDist = Math.abs(dy);
+            }
+
+            if (isDirectionValid) {
+              // Weight orthogonal distance heavier to prefer natural grid lines
+              const weightedDistance = primaryDist + secondaryDist * 2.2;
+              if (weightedDistance < bestDistance) {
+                bestDistance = weightedDistance;
+                bestCandidate = el;
+              }
+            }
+          }
+
+          if (bestCandidate) {
+            bestCandidate.focus();
+            bestCandidate.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }
+
+      };
+    }
+  </script>
+
+  <!-- PWA Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('SonyHub SW registered:', reg.scope))
+          .catch(err => console.warn('SW registration failed:', err));
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="en" x-data="audioAnalyzer()" x-init="init()">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sony Home Theater · AI Room Analyzer</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'sony-gold': '#f0a500',
+            'sony-blue': '#003087',
+            'panel': '#0d1117',
+            'panel-light': '#161b22',
+            'panel-border': '#21262d',
+            'accent': '#58a6ff',
+          },
+          fontFamily: {
+            mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    * { box-sizing: border-box; }
+
+    body {
+      background: #070b0f;
+      color: #e6edf3;
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0d1117; }
+    ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+
+    /* Glassmorphism card */
+    .glass {
+      background: rgba(22, 27, 34, 0.85);
+      border: 1px solid #21262d;
+      backdrop-filter: blur(12px);
+    }
+
+    /* Glow effects */
+    .glow-blue  { box-shadow: 0 0 20px rgba(88, 166, 255, 0.3); }
+    .glow-gold  { box-shadow: 0 0 20px rgba(240, 165, 0, 0.4); }
+    .glow-green { box-shadow: 0 0 20px rgba(56, 211, 159, 0.3); }
+    .glow-red   { box-shadow: 0 0 16px rgba(248, 81, 73, 0.35); }
+
+    .text-glow-blue  { text-shadow: 0 0 12px rgba(88, 166, 255, 0.6); }
+    .text-glow-gold  { text-shadow: 0 0 12px rgba(240, 165, 0, 0.7); }
+    .text-glow-green { text-shadow: 0 0 12px rgba(56, 211, 159, 0.6); }
+
+    /* Animated gradient border */
+    .gradient-border {
+      position: relative;
+      background: rgba(22, 27, 34, 0.9);
+    }
+    .gradient-border::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(135deg, #58a6ff, #f0a500, #38d39f, #58a6ff);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      background-size: 300% 300%;
+      animation: borderSpin 4s linear infinite;
+    }
+    @keyframes borderSpin {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* Pulse animation */
+    @keyframes pulse-ring {
+      0%   { transform: scale(1); opacity: 0.8; }
+      50%  { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.8; }
+    }
+    .pulse { animation: pulse-ring 2s ease-in-out infinite; }
+
+    /* Recording blink */
+    @keyframes recBlink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.2; }
+    }
+    .rec-blink { animation: recBlink 1s ease-in-out infinite; }
+
+    /* EQ bar styles */
+    .eq-bar-track {
+      position: relative;
+      width: 28px;
+      height: 160px;
+      background: #0d1117;
+      border-radius: 4px;
+      border: 1px solid #21262d;
+      overflow: hidden;
+    }
+    .eq-bar-fill {
+      position: absolute;
+      bottom: 50%;
+      left: 0;
+      right: 0;
+      transition: height 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    .eq-bar-fill.boost {
+      background: linear-gradient(to top, #38d39f, #58a6ff);
+    }
+    .eq-bar-fill.cut {
+      bottom: auto;
+      top: 50%;
+      background: linear-gradient(to bottom, #f0a500, #f85149);
+    }
+    .eq-center-line {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: #30363d;
+    }
+
+    /* Score ring */
+    .score-ring {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .score-ring svg { transform: rotate(-90deg); }
+    .score-ring .score-text {
+      position: absolute;
+      text-align: center;
+    }
+
+    /* Step indicator */
+    .step-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #30363d;
+      transition: all 0.3s;
+    }
+    .step-dot.active {
+      background: #58a6ff;
+      box-shadow: 0 0 8px rgba(88,166,255,0.6);
+    }
+    .step-dot.done {
+      background: #38d39f;
+      box-shadow: 0 0 8px rgba(56,211,159,0.4);
+    }
+
+    /* Frequency bar hover */
+    .freq-band:hover { opacity: 0.9; transform: scale(1.02); transition: all 0.15s; }
+
+    /* Scan line effect for canvas */
+    .canvas-wrapper { position: relative; }
+    .canvas-wrapper::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.08) 2px,
+        rgba(0,0,0,0.08) 4px
+      );
+      pointer-events: none;
+    }
+
+    /* Button base */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      outline: none;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary {
+      background: linear-gradient(135deg, #1f6feb, #388bfd);
+      color: #fff;
+    }
+    .btn-primary:hover { background: linear-gradient(135deg, #388bfd, #58a6ff); box-shadow: 0 0 16px rgba(88,166,255,0.4); }
+    .btn-gold {
+      background: linear-gradient(135deg, #b76e00, #f0a500);
+      color: #000;
+    }
+    .btn-gold:hover { background: linear-gradient(135deg, #f0a500, #ffc533); box-shadow: 0 0 16px rgba(240,165,0,0.5); }
+    .btn-green {
+      background: linear-gradient(135deg, #1a6640, #2ea043);
+      color: #fff;
+    }
+    .btn-green:hover { background: linear-gradient(135deg, #2ea043, #38d39f); box-shadow: 0 0 16px rgba(56,211,159,0.4); }
+    .btn-red {
+      background: linear-gradient(135deg, #8b1a1a, #f85149);
+      color: #fff;
+    }
+    .btn-red:hover { background: linear-gradient(135deg, #f85149, #ff7b72); }
+    .btn-ghost {
+      background: rgba(255,255,255,0.06);
+      color: #8b949e;
+      border: 1px solid #30363d;
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.10); color: #e6edf3; }
+
+    /* Tooltip */
+    [data-tip] { position: relative; }
+    [data-tip]::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: 110%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #161b22;
+      border: 1px solid #30363d;
+      color: #8b949e;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    [data-tip]:hover::after { opacity: 1; }
+
+    canvas { display: block; }
+
+    .fade-in { animation: fadeIn 0.4s ease forwards; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Progress bar */
+    .progress-bar {
+      height: 3px;
+      background: linear-gradient(90deg, #58a6ff, #38d39f);
+      border-radius: 2px;
+      transition: width 0.3s linear;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen">
+
+  <!-- Background grid -->
+  <div class="fixed inset-0 pointer-events-none" style="background-image: radial-gradient(circle at 1px 1px, #1c2228 1px, transparent 0); background-size: 32px 32px; opacity: 0.5;"></div>
+
+  <!-- Header -->
+  <header class="relative z-10 border-b border-panel-border" style="background: rgba(13,17,23,0.95);">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <!-- Sony-style logo mark -->
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-md flex items-center justify-center" style="background: linear-gradient(135deg, #003087, #0056d2);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="#58a6ff" stroke-width="1.5"/>
+              <path d="M8 12h8M12 8v8" stroke="#58a6ff" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500 font-mono uppercase tracking-widest leading-none">Sony</div>
+            <div class="text-sm font-bold leading-none text-white">Home Theater</div>
+          </div>
+        </div>
+        <div class="w-px h-8 bg-panel-border"></div>
+        <div>
+          <div class="text-base font-semibold text-white">AI Room Analyzer</div>
+          <div class="text-xs text-gray-500 font-mono">Acoustic · Calibration · EQ</div>
+        </div>
+      </div>
+
+      <!-- Step indicator -->
+      <div class="flex items-center gap-3">
+        <template x-for="(s, i) in ['Setup', 'Analyze', 'Results']" :key="i">
+          <div class="flex items-center gap-2">
+            <div class="step-dot" :class="{ 'active': step === i+1, 'done': step > i+1 }"></div>
+            <span class="text-xs font-mono" :class="step === i+1 ? 'text-accent' : (step > i+1 ? 'text-green-400' : 'text-gray-600')" x-text="s"></span>
+            <template x-if="i < 2">
+              <span class="text-gray-700 mx-1">›</span>
+            </template>
+          </div>
+        </template>
+        <!-- Live indicator -->
+        <div class="ml-4 flex items-center gap-1.5" x-show="isRecording">
+          <div class="w-2 h-2 rounded-full bg-red-500 rec-blink"></div>
+          <span class="text-xs font-mono text-red-400">REC</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="relative z-10 max-w-6xl mx-auto px-6 py-8">
+
+    <!-- ══════════════════════════════════════════════════ -->
+    <!-- STEP 1: SETUP                                      -->
+    <!-- ══════════════════════════════════════════════════ -->
+    <div x-show="step === 1" class="fade-in">
+
+      <!-- Hero -->
+      <div class="text-center mb-10">
+        <div class="inline-flex items-center gap-2 bg-panel-light border border-panel-border rounded-full px-4 py-1 mb-4">
+          <div class="w-1.5 h-1.5 rounded-full bg-sony-gold pulse"></div>
+          <span class="text-xs font-mono text-sony-gold">AI-POWERED ROOM CALIBRATION</span>
+        </div>
+        <h1 class="text-4xl font-bold mb-3 bg-gradient-to-r from-white via-blue-200 to-sony-gold bg-clip-text text-transparent">
+          Room Acoustic Analyzer
+        </h1>
+        <p class="text-gray-400 text-lg max-w-xl mx-auto">
+          Analyze your listening room and get personalized EQ settings optimized for your Sony home theater system.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Instructions card -->
+        <div class="glass rounded-2xl p-6">
+          <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
+            <span class="text-lg">📋</span> Setup Instructions
+          </h2>
+          <ol class="space-y-4">
+            <li class="flex gap-3">
+              <div class="w-6 h-6 rounded-full bg-blue-500 bg-opacity-20 border border-blue-500 border-opacity-40 flex items-center justify-center text-xs font-bold text-blue-400 shrink-0 mt-0.5">1</div>
+              <div>
+                <p class="text-sm text-white font-medium">Position Your Microphone</p>
+                <p class="text-xs text-gray-400 mt-0.5">Place your phone or laptop <strong class="text-gray-300">1–2 meters</strong> from the main speakers, at <strong class="text-gray-300">ear level</strong> in your primary listening position (e.g., center of the couch).</p>
+              </div>
+            </li>
+            <li class="flex gap-3">
+              <div class="w-6 h-6 rounded-full bg-yellow-500 bg-opacity-20 border border-yellow-500 border-opacity-40 flex items-center justify-center text-xs font-bold text-yellow-400 shrink-0 mt-0.5">2</div>
+              <div>
+                <p class="text-sm text-white font-medium">Set Sony Volume to Reference Level</p>
+                <p class="text-xs text-gray-400 mt-0.5">Set your Sony receiver volume to your <strong class="text-gray-300">normal listening level</strong>. Disable any existing EQ, surround modes, or room correction (Dolby Atmos, DTS:X are fine).</p>
+              </div>
+            </li>
+            <li class="flex gap-3">
+              <div class="w-6 h-6 rounded-full bg-green-500 bg-opacity-20 border border-green-500 border-opacity-40 flex items-center justify-center text-xs font-bold text-green-400 shrink-0 mt-0.5">3</div>
+              <div>
+                <p class="text-sm text-white font-medium">Play Test Tone or Music</p>
+                <p class="text-xs text-gray-400 mt-0.5">Use the built-in frequency sweep below, or play full-range music through your Sony system. Minimize background noise during analysis.</p>
+              </div>
+            </li>
+            <li class="flex gap-3">
+              <div class="w-6 h-6 rounded-full bg-purple-500 bg-opacity-20 border border-purple-500 border-opacity-40 flex items-center justify-center text-xs font-bold text-purple-400 shrink-0 mt-0.5">4</div>
+              <div>
+                <p class="text-sm text-white font-medium">Proceed to Microphone Analysis</p>
+                <p class="text-xs text-gray-400 mt-0.5">Once the test tone is playing, click <strong class="text-gray-300">Continue to Analysis</strong> and grant microphone permission when prompted.</p>
+              </div>
+            </li>
+          </ol>
+
+          <!-- Disclaimer -->
+          <div class="mt-5 p-3 rounded-lg border border-yellow-500 border-opacity-25 bg-yellow-500 bg-opacity-5">
+            <p class="text-xs text-yellow-300 text-opacity-80">
+              ⚠️ <strong>Disclaimer:</strong> Results are AI-estimated based on frequency data from your device's microphone. For professional-grade calibration, consider <strong>Audyssey MultEQ</strong> or <strong>Dirac Live</strong>.
+            </p>
+          </div>
+        </div>
+
+        <!-- Test tone card -->
+        <div class="glass rounded-2xl p-6 flex flex-col">
+          <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
+            <span class="text-lg">🎵</span> Built-in Test Tone Generator
+          </h2>
+
+          <!-- Tone visualizer -->
+          <div class="canvas-wrapper rounded-xl overflow-hidden mb-4 flex-1" style="min-height:120px; background:#070b0f; border:1px solid #21262d;">
+            <canvas id="toneCanvas" width="600" height="120" style="width:100%; height:120px;"></canvas>
+          </div>
+
+          <!-- Tone type -->
+          <div class="mb-4">
+            <label class="text-xs text-gray-400 mb-2 block">Tone Type</label>
+            <div class="flex gap-2 flex-wrap">
+              <template x-for="t in toneTypes" :key="t.value">
+                <button @click="selectedTone = t.value" class="px-3 py-1.5 rounded-md text-xs font-medium transition-all border"
+                  :class="selectedTone === t.value ? 'bg-blue-500 bg-opacity-20 border-blue-500 border-opacity-50 text-blue-300' : 'bg-transparent border-panel-border text-gray-400 hover:border-gray-500'"
+                  x-text="t.label">
+                </button>
+              </template>
+            </div>
+          </div>
+
+          <!-- Frequency display (for sweep) -->
+          <div class="mb-4 font-mono text-center" x-show="isTonePlaying">
+            <div class="text-xs text-gray-500 mb-1">Current Frequency</div>
+            <div class="text-2xl font-bold text-accent text-glow-blue" x-text="currentFreq + ' Hz'"></div>
+          </div>
+
+          <!-- Controls -->
+          <div class="flex gap-3">
+            <button @click="playTestTone()" class="btn btn-gold flex-1" :disabled="isTonePlaying" :class="isTonePlaying ? 'opacity-50 cursor-not-allowed' : ''">
+              <span>▶</span> Play Test Tone
+            </button>
+            <button @click="stopTestTone()" class="btn btn-red" :disabled="!isTonePlaying" :class="!isTonePlaying ? 'opacity-40 cursor-not-allowed' : ''">
+              <span>⏹</span> Stop
+            </button>
+          </div>
+
+          <div class="mt-3 text-xs text-gray-500 text-center">
+            The sweep runs 20 Hz → 20 kHz. Let it complete at least once before analyzing.
+          </div>
+
+          <!-- Continue button -->
+          <button @click="goToStep2()" class="btn btn-primary mt-5 w-full justify-center text-base">
+            Continue to Microphone Analysis →
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══════════════════════════════════════════════════ -->
+    <!-- STEP 2: ANALYSIS                                   -->
+    <!-- ══════════════════════════════════════════════════ -->
+    <div x-show="step === 2" class="fade-in">
+
+      <div class="text-center mb-8">
+        <h2 class="text-3xl font-bold text-white mb-2">Microphone Analysis</h2>
+        <p class="text-gray-400">Grant microphone access, then record your room's acoustic response.</p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Visualizer (large) -->
+        <div class="lg:col-span-2">
+          <div class="glass rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full" :class="isRecording ? 'bg-red-500 rec-blink' : 'bg-gray-600'"></div>
+                <span class="text-sm font-mono text-gray-400" x-text="isRecording ? 'RECORDING' : (micReady ? 'READY' : 'STANDBY')"></span>
+              </div>
+              <div class="font-mono text-sm text-gray-500" x-show="!isRecording && micReady">Live Input</div>
+              <div class="font-mono text-lg font-bold" :class="countdown <= 3 && isRecording ? 'text-red-400' : 'text-accent'" x-show="isRecording">
+                <span x-text="countdown"></span>s
+              </div>
+            </div>
+
+            <!-- Progress bar -->
+            <div class="w-full bg-panel rounded-full mb-3 overflow-hidden" style="height:3px;" x-show="isRecording">
+              <div class="progress-bar" :style="`width: ${((10 - countdown) / 10) * 100}%`"></div>
+            </div>
+
+            <!-- Spectrum canvas -->
+            <div class="canvas-wrapper rounded-xl overflow-hidden" style="background:#070b0f; border:1px solid #21262d;">
+              <canvas id="spectrumCanvas" width="800" height="220" style="width:100%; height:220px;"></canvas>
+            </div>
+
+            <!-- Waveform canvas -->
+            <div class="canvas-wrapper rounded-xl overflow-hidden mt-3" style="background:#070b0f; border:1px solid #21262d;">
+              <canvas id="waveformCanvas" width="800" height="80" style="width:100%; height:80px;"></canvas>
+            </div>
+
+            <!-- Mic placement tip -->
+            <div class="mt-4 p-3 rounded-lg bg-blue-500 bg-opacity-5 border border-blue-500 border-opacity-20">
+              <p class="text-xs text-blue-300">
+                🎤 <strong>Mic Tip:</strong> Hold your device at ear level, 1–2 m from speakers. Stay still and minimize background noise during the 10-second recording.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls panel -->
+        <div class="space-y-4">
+
+          <!-- Start button -->
+          <div class="glass rounded-2xl p-5">
+            <h3 class="text-sm font-semibold text-white mb-4">Recording Controls</h3>
+            <button @click="startMicAnalysis()"
+              class="btn btn-green w-full justify-center text-base"
+              :disabled="isRecording || isAnalyzing"
+              :class="(isRecording || isAnalyzing) ? 'opacity-50 cursor-not-allowed' : 'pulse'">
+              🎤 Start Microphone Analysis
+            </button>
+
+            <div class="mt-3 space-y-2">
+              <div class="flex justify-between text-xs">
+                <span class="text-gray-500">Duration</span>
+                <span class="font-mono text-gray-300">10 seconds</span>
+              </div>
+              <div class="flex justify-between text-xs">
+                <span class="text-gray-500">FFT Size</span>
+                <span class="font-mono text-gray-300">4096 bins</span>
+              </div>
+              <div class="flex justify-between text-xs">
+                <span class="text-gray-500">Frequency bands</span>
+                <span class="font-mono text-gray-300">6 bands</span>
+              </div>
+              <div class="flex justify-between text-xs">
+                <span class="text-gray-500">Sample rate</span>
+                <span class="font-mono text-gray-300" x-text="sampleRate ? sampleRate + ' Hz' : '—'"></span>
+              </div>
+            </div>
+
+            <div class="mt-4 text-xs text-gray-500 text-center" x-show="isAnalyzing && !isRecording">
+              ⚙️ Processing FFT data…
+            </div>
+          </div>
+
+          <!-- Level meter -->
+          <div class="glass rounded-2xl p-5">
+            <h3 class="text-sm font-semibold text-white mb-3">Input Level</h3>
+            <div class="space-y-1.5">
+              <template x-for="(bar, i) in levelBars" :key="i">
+                <div class="flex items-center gap-2">
+                  <div class="w-12 text-right font-mono text-xs text-gray-500" x-text="bar.label"></div>
+                  <div class="flex-1 h-2 rounded-full overflow-hidden" style="background:#0d1117;">
+                    <div class="h-full rounded-full transition-all duration-75"
+                      :style="`width: ${bar.level}%; background: ${bar.level > 85 ? '#f85149' : bar.level > 65 ? '#f0a500' : '#38d39f'}`">
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+            <div class="mt-3 text-center">
+              <span class="text-xs font-mono" :class="inputLevel > 85 ? 'text-red-400' : inputLevel > 50 ? 'text-green-400' : 'text-gray-500'"
+                x-text="inputLevel > 85 ? '⚠ CLIPPING' : inputLevel > 20 ? '✓ GOOD SIGNAL' : micReady ? '↑ INCREASE VOLUME' : 'AWAITING MIC'">
+              </span>
+            </div>
+          </div>
+
+          <!-- Back button -->
+          <button @click="goToStep1()" class="btn btn-ghost w-full justify-center">
+            ← Back to Setup
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════ -->
+    <!-- STEP 3: RESULTS                                    -->
+    <!-- ══════════════════════════════════════════════════ -->
+    <div x-show="step === 3" class="fade-in">
+
+      <!-- Header row -->
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h2 class="text-2xl font-bold text-white">Analysis Results</h2>
+          <p class="text-gray-400 text-sm mt-0.5">AI-generated EQ recommendations for your Sony home theater</p>
+        </div>
+        <div class="flex gap-2">
+          <button @click="copySettings()" class="btn btn-ghost">
+            <span>📋</span> Copy Settings
+          </button>
+          <button @click="reAnalyze()" class="btn btn-primary">
+            <span>🔄</span> Re-analyze
+          </button>
+        </div>
+      </div>
+
+      <!-- Top row: Score + Issues -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
+
+        <!-- Acoustics Score -->
+        <div class="glass rounded-2xl p-6 text-center">
+          <h3 class="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">Room Acoustics Score</h3>
+          <div class="score-ring mx-auto mb-3" style="width:160px; height:160px;">
+            <svg width="160" height="160" viewBox="0 0 160 160">
+              <!-- Track -->
+              <circle cx="80" cy="80" r="65" fill="none" stroke="#21262d" stroke-width="10"/>
+              <!-- Fill -->
+              <circle cx="80" cy="80" r="65" fill="none"
+                :stroke="results.score >= 75 ? '#38d39f' : results.score >= 50 ? '#f0a500' : '#f85149'"
+                stroke-width="10"
+                stroke-linecap="round"
+                :stroke-dasharray="`${(results.score / 100) * 408.41} 408.41`"
+                style="transition: stroke-dasharray 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);"
+              />
+            </svg>
+            <div class="score-text">
+              <div class="text-4xl font-bold" :class="results.score >= 75 ? 'text-green-400 text-glow-green' : results.score >= 50 ? 'text-yellow-400 text-glow-gold' : 'text-red-400'" x-text="results.score"></div>
+              <div class="text-xs text-gray-500 mt-1">/100</div>
+            </div>
+          </div>
+          <div class="text-sm font-semibold" :class="results.score >= 75 ? 'text-green-400' : results.score >= 50 ? 'text-yellow-400' : 'text-red-400'"
+            x-text="results.score >= 75 ? '✓ Good Room Response' : results.score >= 50 ? '◐ Moderate Issues' : '✗ Significant Problems'">
+          </div>
+          <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-panel rounded-lg p-2">
+              <div class="text-gray-500">Flatness</div>
+              <div class="font-mono font-bold text-white" x-text="results.flatness + '%'"></div>
+            </div>
+            <div class="bg-panel rounded-lg p-2">
+              <div class="text-gray-500">Peak Deviation</div>
+              <div class="font-mono font-bold text-white" x-text="results.peakDev + ' dB'"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Room Issues -->
+        <div class="md:col-span-2 glass rounded-2xl p-6">
+          <h3 class="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">🔍 Room Issues Detected</h3>
+          <div class="space-y-3">
+            <template x-for="issue in results.issues" :key="issue.title">
+              <div class="flex gap-3 p-3 rounded-xl" :style="`background: rgba(${issue.color}, 0.08); border: 1px solid rgba(${issue.color}, 0.2);`">
+                <div class="text-xl shrink-0" x-text="issue.icon"></div>
+                <div>
+                  <div class="text-sm font-semibold text-white" x-text="issue.title"></div>
+                  <div class="text-xs text-gray-400 mt-0.5" x-text="issue.desc"></div>
+                </div>
+                <div class="ml-auto shrink-0">
+                  <span class="text-xs font-mono px-2 py-0.5 rounded-full border"
+                    :style="`color: rgb(${issue.color}); border-color: rgba(${issue.color}, 0.3); background: rgba(${issue.color}, 0.1);`"
+                    x-text="issue.severity">
+                  </span>
+                </div>
+              </div>
+            </template>
+            <template x-if="results.issues.length === 0">
+              <div class="text-center py-4 text-green-400 text-sm">✓ No major room issues detected — excellent acoustic environment!</div>
+            </template>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Frequency Response Chart -->
+      <div class="glass rounded-2xl p-6 mb-5">
+        <h3 class="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">📊 Frequency Response vs. Flat Reference</h3>
+        <div style="height:220px; position:relative;">
+          <canvas id="freqChart"></canvas>
+        </div>
+      </div>
+
+      <!-- EQ Recommendations -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+
+        <!-- Visual EQ -->
+        <div class="glass rounded-2xl p-6">
+          <h3 class="text-sm font-semibold text-gray-400 mb-1 uppercase tracking-wider">🎚 AI EQ Recommendations</h3>
+          <p class="text-xs text-gray-500 mb-5">Boost/cut values to correct your room's response</p>
+
+          <!-- EQ hardware look -->
+          <div class="rounded-xl p-4" style="background: #070b0f; border: 1px solid #21262d;">
+            <!-- dB scale -->
+            <div class="flex gap-1 mb-2">
+              <div class="w-16 text-right text-xs font-mono text-gray-600">+12</div>
+              <div class="flex-1 flex justify-around">
+                <template x-for="band in results.eqBands" :key="band.label">
+                  <div class="text-center"></div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Bars -->
+            <div class="flex items-end gap-2">
+              <!-- Y-axis labels -->
+              <div class="flex flex-col justify-between text-right font-mono text-xs text-gray-600 shrink-0" style="height:160px; width:40px;">
+                <span>+12</span>
+                <span>+6</span>
+                <span>0</span>
+                <span>-6</span>
+                <span>-12</span>
+              </div>
+              <!-- EQ bars -->
+              <div class="flex-1 flex items-center gap-3 justify-around">
+                <template x-for="band in results.eqBands" :key="band.label">
+                  <div class="flex flex-col items-center gap-2 freq-band" :data-tip="`${band.value > 0 ? '+' : ''}${band.value} dB`">
+                    <!-- dB value -->
+                    <div class="font-mono text-xs font-bold" :class="band.value > 0 ? 'text-green-400' : band.value < 0 ? 'text-yellow-400' : 'text-gray-500'"
+                      x-text="(band.value > 0 ? '+' : '') + band.value + 'dB'">
+                    </div>
+                    <!-- Bar track -->
+                    <div class="eq-bar-track">
+                      <div class="eq-center-line"></div>
+                      <!-- Boost bar (upward from center) -->
+                      <div class="eq-bar-fill boost" x-show="band.value >= 0"
+                        :style="`height: ${Math.abs(band.value) / 12 * 50}%; bottom: 50%;`">
+                      </div>
+                      <!-- Cut bar (downward from center) -->
+                      <div class="eq-bar-fill cut" x-show="band.value < 0"
+                        :style="`height: ${Math.abs(band.value) / 12 * 50}%; top: 50%;`">
+                      </div>
+                    </div>
+                    <!-- Label -->
+                    <div class="text-center">
+                      <div class="text-xs font-mono text-gray-300" x-text="band.label"></div>
+                      <div class="text-xs text-gray-600" x-text="band.range"></div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sony Manual Settings -->
+        <div class="glass rounded-2xl p-6">
+          <h3 class="text-sm font-semibold text-gray-400 mb-1 uppercase tracking-wider">📺 Sony Receiver Settings</h3>
+          <p class="text-xs text-gray-500 mb-4">Navigate: Menu → Audio → Sound Settings → EQ</p>
+
+          <div class="space-y-3">
+            <template x-for="setting in results.sonySettings" :key="setting.name">
+              <div class="flex items-center gap-3 p-3 rounded-xl" style="background:#0d1117; border:1px solid #21262d;">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" :style="`background: rgba(${setting.color}, 0.15); border: 1px solid rgba(${setting.color}, 0.3);`">
+                  <span x-text="setting.icon"></span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-xs text-gray-500 font-mono" x-text="setting.path"></div>
+                  <div class="text-sm text-white font-medium truncate" x-text="setting.name"></div>
+                </div>
+                <div class="text-right shrink-0">
+                  <div class="font-mono font-bold text-base" :style="`color: rgb(${setting.color})`" x-text="setting.value"></div>
+                  <div class="text-xs text-gray-500" x-text="setting.unit"></div>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <div class="mt-4 p-3 rounded-lg bg-panel border border-panel-border">
+            <p class="text-xs text-gray-400">
+              💡 <strong class="text-white">Tip:</strong> Apply changes one at a time and listen after each adjustment. Trust your ears — these are AI estimates based on your room's measured response.
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom disclaimer -->
+      <div class="glass rounded-xl p-4 flex items-start gap-3">
+        <span class="text-yellow-400 text-lg shrink-0">⚠️</span>
+        <p class="text-xs text-gray-400 leading-relaxed">
+          <strong class="text-yellow-300">Disclaimer:</strong> This analysis is AI-estimated using your device's built-in microphone, which may not be calibrated for flat frequency response. Results are intended as a <em>starting point</em> for manual adjustment. For professional room correction, consider hardware solutions like <strong class="text-white">Audyssey MultEQ XT32</strong>, <strong class="text-white">Dirac Live</strong>, or <strong class="text-white">Sony's built-in Auto Calibration (DCAC)</strong> if your receiver supports it.
+        </p>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="relative z-10 border-t border-panel-border mt-12 py-4">
+    <div class="max-w-6xl mx-auto px-6 flex items-center justify-between">
+      <p class="text-xs text-gray-600 font-mono">Sony Home Theater · AI Room Analyzer · All processing is done locally in your browser</p>
+      <div class="flex items-center gap-1.5 text-xs text-gray-600">
+        <div class="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+        Client-side only · No data sent
+      </div>
+    </div>
+  </footer>
+
+  <!-- Copy Toast -->
+  <div x-show="showCopied" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0"
+    class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-green-500 text-black text-sm font-semibold px-5 py-2.5 rounded-full shadow-lg">
+    ✓ Settings copied to clipboard!
+  </div>
+
+<script>
+function audioAnalyzer() {
+  return {
+    // ─── State ──────────────────────────────────────────────
+    step: 1,
+    isTonePlaying: false,
+    isRecording: false,
+    isAnalyzing: false,
+    micReady: false,
+    countdown: 10,
+    currentFreq: 20,
+    sampleRate: null,
+    inputLevel: 0,
+    showCopied: false,
+    selectedTone: 'sweep',
+
+    toneTypes: [
+      { label: '20Hz→20kHz Sweep', value: 'sweep' },
+      { label: 'Pink Noise',        value: 'pink'  },
+      { label: 'White Noise',       value: 'white' },
+      { label: '1kHz Sine',         value: 'sine1k'},
+    ],
+
+    // Level meter bars
+    levelBars: [
+      { label: '500Hz', level: 0 },
+      { label: '1kHz',  level: 0 },
+      { label: '2kHz',  level: 0 },
+      { label: '4kHz',  level: 0 },
+      { label: '8kHz',  level: 0 },
+    ],
+
+    // Audio objects
+    audioCtx: null,
+    micStream: null,
+    analyser: null,
+    toneOscillator: null,
+    toneGain: null,
+    noiseSource: null,
+    animFrameId: null,
+    fftAccumulator: [],
+    fftFrameCount: 0,
+
+    // Results
+    results: {
+      score: 0, flatness: 0, peakDev: 0,
+      issues: [], eqBands: [], sonySettings: [],
+      rawFFT: [], avgFFT: [],
+    },
+
+    freqChart: null,
+
+    // ─── Init ────────────────────────────────────────────────
+    init() {
+      this.$nextTick(() => {
+        this.drawToneCanvas();
+      });
+    },
+
+    // ─── Navigation ─────────────────────────────────────────
+    goToStep2() {
+      this.step = 2;
+      this.$nextTick(() => {
+        this.initAudioContext();
+        this.drawIdleSpectrum();
+      });
+    },
+
+    goToStep1() {
+      this.stopMic();
+      this.step = 1;
+      this.$nextTick(() => this.drawToneCanvas());
+    },
+
+    reAnalyze() {
+      if (this.freqChart) { this.freqChart.destroy(); this.freqChart = null; }
+      this.fftAccumulator = [];
+      this.fftFrameCount = 0;
+      this.results = { score: 0, flatness: 0, peakDev: 0, issues: [], eqBands: [], sonySettings: [], rawFFT: [], avgFFT: [] };
+      this.step = 2;
+      this.$nextTick(() => {
+        this.initAudioContext();
+        this.drawIdleSpectrum();
+      });
+    },
+
+    // ─── Audio Context ───────────────────────────────────────
+    getAudioContext() {
+      if (!this.audioCtx || this.audioCtx.state === 'closed') {
+        this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+      return this.audioCtx;
+    },
+
+    initAudioContext() {
+      const ctx = this.getAudioContext();
+      this.sampleRate = ctx.sampleRate;
+    },
+
+    // ─── Test Tone ───────────────────────────────────────────
+    playTestTone() {
+      const ctx = this.getAudioContext();
+      this.stopTestTone();
+
+      this.toneGain = ctx.createGain();
+      this.toneGain.gain.setValueAtTime(0.3, ctx.currentTime);
+      this.toneGain.connect(ctx.destination);
+
+      if (this.selectedTone === 'sweep') {
+        this.toneOscillator = ctx.createOscillator();
+        this.toneOscillator.type = 'sine';
+        this.toneOscillator.frequency.setValueAtTime(20, ctx.currentTime);
+        this.toneOscillator.frequency.exponentialRampToValueAtTime(20000, ctx.currentTime + 10);
+        this.toneOscillator.connect(this.toneGain);
+        this.toneOscillator.start();
+
+        // Track current freq
+        const startTime = ctx.currentTime;
+        const updateFreq = () => {
+          if (!this.isTonePlaying) return;
+          const elapsed = ctx.currentTime - startTime;
+          // logarithmic interpolation: 20 * (20000/20)^(t/10)
+          this.currentFreq = Math.round(20 * Math.pow(1000, elapsed / 10));
+          if (this.currentFreq > 20000) {
+            this.currentFreq = 20000;
+            this.stopTestTone();
+            return;
+          }
+          requestAnimationFrame(updateFreq);
+        };
+        this.isTonePlaying = true;
+        requestAnimationFrame(updateFreq);
+
+        this.toneOscillator.onended = () => { this.isTonePlaying = false; };
+
+      } else if (this.selectedTone === 'sine1k') {
+        this.toneOscillator = ctx.createOscillator();
+        this.toneOscillator.type = 'sine';
+        this.toneOscillator.frequency.value = 1000;
+        this.toneOscillator.connect(this.toneGain);
+        this.toneOscillator.start();
+        this.currentFreq = 1000;
+        this.isTonePlaying = true;
+
+      } else {
+        // Pink or white noise via script processor
+        const bufferSize = 4096;
+        const node = ctx.createScriptProcessor(bufferSize, 1, 1);
+        let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+        node.onaudioprocess = (e) => {
+          const out = e.outputBuffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            if (this.selectedTone === 'pink') {
+              b0=0.99886*b0+white*0.0555179; b1=0.99332*b1+white*0.0750759;
+              b2=0.96900*b2+white*0.1538520; b3=0.86650*b3+white*0.3104856;
+              b4=0.55000*b4+white*0.5329522; b5=-0.7616*b5-white*0.0168980;
+              out[i]=(b0+b1+b2+b3+b4+b5+b6+white*0.5362)*0.11;
+              b6=white*0.115926;
+            } else {
+              out[i] = white * 0.3;
+            }
+          }
+        };
+        node.connect(this.toneGain);
+        this.noiseSource = node;
+        this.isTonePlaying = true;
+        this.currentFreq = 0;
+      }
+
+      this.animateToneCanvas();
+    },
+
+    stopTestTone() {
+      if (this.toneOscillator) { try { this.toneOscillator.stop(); } catch(e){} this.toneOscillator = null; }
+      if (this.noiseSource) { this.noiseSource.disconnect(); this.noiseSource = null; }
+      if (this.toneGain) { this.toneGain.disconnect(); this.toneGain = null; }
+      this.isTonePlaying = false;
+    },
+
+    // ─── Tone Canvas ─────────────────────────────────────────
+    drawToneCanvas() {
+      const canvas = document.getElementById('toneCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#070b0f';
+      ctx.fillRect(0, 0, W, H);
+
+      // Draw a nice sine wave
+      const t = Date.now() / 1000;
+      ctx.beginPath();
+      ctx.strokeStyle = '#1f6feb';
+      ctx.lineWidth = 2;
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = '#58a6ff';
+      for (let x = 0; x < W; x++) {
+        const freq = 2 + (x / W) * 8;
+        const y = H / 2 + Math.sin((x / W) * Math.PI * freq * 2 + t * 3) * (H * 0.35);
+        x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Frequency label
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(88,166,255,0.3)';
+      ctx.font = '11px JetBrains Mono, monospace';
+      ctx.fillText('20 Hz', 8, H - 8);
+      ctx.textAlign = 'right';
+      ctx.fillText('20 kHz', W - 8, H - 8);
+      ctx.textAlign = 'left';
+    },
+
+    animateToneCanvas() {
+      this.drawToneCanvas();
+      if (this.isTonePlaying) requestAnimationFrame(() => this.animateToneCanvas());
+    },
+
+    // ─── Mic Analysis ────────────────────────────────────────
+    async startMicAnalysis() {
+      if (this.isRecording) return;
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+        });
+        this.micStream = stream;
+        const ctx = this.getAudioContext();
+        this.sampleRate = ctx.sampleRate;
+
+        // Analyser
+        this.analyser = ctx.createAnalyser();
+        this.analyser.fftSize = 4096;
+        this.analyser.smoothingTimeConstant = 0.75;
+
+        const source = ctx.createMediaStreamSource(stream);
+        source.connect(this.analyser);
+        this.micReady = true;
+
+        // Reset accumulator
+        this.fftAccumulator = new Float32Array(this.analyser.frequencyBinCount).fill(0);
+        this.fftFrameCount = 0;
+
+        // Start recording
+        this.isRecording = true;
+        this.countdown = 10;
+
+        // Countdown timer
+        const countdownInterval = setInterval(() => {
+          this.countdown--;
+          if (this.countdown <= 0) {
+            clearInterval(countdownInterval);
+            this.finishRecording();
+          }
+        }, 1000);
+
+        // Animate
+        this.animateSpectrum();
+
+      } catch (err) {
+        alert('Microphone access denied or unavailable. Please allow microphone access in your browser.');
+        console.error(err);
+      }
+    },
+
+    stopMic() {
+      if (this.micStream) {
+        this.micStream.getTracks().forEach(t => t.stop());
+        this.micStream = null;
+      }
+      this.micReady = false;
+      this.isRecording = false;
+      cancelAnimationFrame(this.animFrameId);
+    },
+
+    // ─── Spectrum Visualizer ─────────────────────────────────
+    drawIdleSpectrum() {
+      const canvas = document.getElementById('spectrumCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#070b0f';
+      ctx.fillRect(0, 0, W, H);
+
+      // Draw placeholder bars
+      const numBars = 80;
+      const barW = W / numBars - 1;
+      for (let i = 0; i < numBars; i++) {
+        const h = 5 + Math.random() * 15;
+        const x = i * (barW + 1);
+        ctx.fillStyle = 'rgba(30, 41, 59, 0.6)';
+        ctx.fillRect(x, H - h, barW, h);
+      }
+
+      // Grid lines
+      ctx.strokeStyle = 'rgba(48, 54, 61, 0.4)';
+      ctx.lineWidth = 1;
+      for (let i = 1; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, (H / 4) * i);
+        ctx.lineTo(W, (H / 4) * i);
+        ctx.stroke();
+      }
+    },
+
+    animateSpectrum() {
+      const specCanvas = document.getElementById('spectrumCanvas');
+      const waveCanvas = document.getElementById('waveformCanvas');
+      if (!specCanvas || !waveCanvas || !this.analyser) return;
+
+      const specCtx = specCanvas.getContext('2d');
+      const waveCtx = waveCanvas.getContext('2d');
+      const W = specCanvas.width, H = specCanvas.height;
+      const Ww = waveCanvas.width, Hw = waveCanvas.height;
+
+      const bufferLength = this.analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      const floatArray = new Float32Array(bufferLength);
+      const timeArray = new Uint8Array(this.analyser.fftSize);
+
+      const draw = () => {
+        this.animFrameId = requestAnimationFrame(draw);
+        this.analyser.getByteFrequencyData(dataArray);
+        this.analyser.getFloatFrequencyData(floatArray);
+        this.analyser.getByteTimeDomainData(timeArray);
+
+        // Accumulate for averaging
+        if (this.isRecording) {
+          for (let i = 0; i < bufferLength; i++) {
+            this.fftAccumulator[i] = (this.fftAccumulator[i] * this.fftFrameCount + floatArray[i]) / (this.fftFrameCount + 1);
+          }
+          this.fftFrameCount++;
+        }
+
+        // ── Spectrum bars ──────────────────────────────
+        specCtx.fillStyle = 'rgba(7, 11, 15, 0.3)';
+        specCtx.fillRect(0, 0, W, H);
+
+        // Grid
+        specCtx.strokeStyle = 'rgba(48,54,61,0.25)';
+        specCtx.lineWidth = 1;
+        for (let i = 1; i < 4; i++) {
+          specCtx.beginPath();
+          specCtx.moveTo(0, (H / 4) * i);
+          specCtx.lineTo(W, (H / 4) * i);
+          specCtx.stroke();
+        }
+
+        const numBars = 120;
+        const sliceWidth = bufferLength / numBars;
+        const barWidth = (W / numBars) - 1;
+        let overallLevel = 0;
+
+        for (let i = 0; i < numBars; i++) {
+          const idx = Math.floor(i * sliceWidth);
+          const value = dataArray[idx] / 255;
+          overallLevel += value;
+
+          const barH = value * H * 0.95;
+          const x = i * (barWidth + 1);
+
+          // Color gradient: bass=blue→mid=cyan→treble=purple
+          const hue = 210 + (i / numBars) * 120;
+          const sat = 70 + value * 30;
+          const lum = 40 + value * 25;
+          const grad = specCtx.createLinearGradient(0, H - barH, 0, H);
+          grad.addColorStop(0, `hsla(${hue}, ${sat}%, ${lum + 20}%, 1)`);
+          grad.addColorStop(0.5, `hsla(${hue + 20}, ${sat}%, ${lum}%, 0.9)`);
+          grad.addColorStop(1, `hsla(${hue + 40}, ${sat - 10}%, ${lum - 10}%, 0.5)`);
+
+          specCtx.fillStyle = grad;
+          specCtx.fillRect(x, H - barH, barWidth, barH);
+
+          // Glow at top
+          if (value > 0.4) {
+            specCtx.fillStyle = `hsla(${hue}, 90%, 80%, ${value * 0.4})`;
+            specCtx.fillRect(x, H - barH - 2, barWidth, 2);
+          }
+        }
+
+        this.inputLevel = Math.round((overallLevel / numBars) * 100);
+
+        // Update level bars
+        const freqs = [500, 1000, 2000, 4000, 8000];
+        freqs.forEach((f, i) => {
+          const bin = Math.round(f / (this.sampleRate / 2) * bufferLength);
+          this.levelBars[i].level = Math.round((dataArray[Math.min(bin, bufferLength-1)] / 255) * 100);
+        });
+
+        // ── Frequency labels ──
+        specCtx.fillStyle = 'rgba(88,166,255,0.4)';
+        specCtx.font = '9px JetBrains Mono, monospace';
+        const freqLabels = ['100', '1k', '5k', '10k', '20k'];
+        const freqPositions = [0.05, 0.15, 0.4, 0.6, 0.95];
+        freqLabels.forEach((lbl, i) => {
+          specCtx.fillText(lbl, freqPositions[i] * W, H - 4);
+        });
+
+        // ── Waveform ─────────────────────────────────
+        waveCtx.fillStyle = 'rgba(7, 11, 15, 0.4)';
+        waveCtx.fillRect(0, 0, Ww, Hw);
+
+        waveCtx.beginPath();
+        waveCtx.lineWidth = 1.5;
+        waveCtx.strokeStyle = '#38d39f';
+        waveCtx.shadowBlur = 6;
+        waveCtx.shadowColor = '#38d39f';
+
+        const step = Math.ceil(timeArray.length / Ww);
+        let x = 0;
+        for (let i = 0; i < timeArray.length; i += step) {
+          const v = timeArray[i] / 128 - 1;
+          const y = (v * Hw / 2) + Hw / 2;
+          i === 0 ? waveCtx.moveTo(x, y) : waveCtx.lineTo(x, y);
+          x += Ww / (timeArray.length / step);
+        }
+        waveCtx.stroke();
+        waveCtx.shadowBlur = 0;
+      };
+
+      draw();
+    },
+
+    // ─── Finish Recording & Analyze ──────────────────────────
+    finishRecording() {
+      this.isRecording = false;
+      this.isAnalyzing = true;
+      cancelAnimationFrame(this.animFrameId);
+      this.stopMic();
+
+      setTimeout(() => {
+        this.computeResults();
+        this.isAnalyzing = false;
+        this.step = 3;
+        this.$nextTick(() => {
+          this.renderFreqChart();
+        });
+      }, 800);
+    },
+
+    // ─── DSP & AI Analysis ───────────────────────────────────
+    computeResults() {
+      const avgFFT = this.fftAccumulator;
+      const sr = this.sampleRate || 48000;
+      const bins = avgFFT.length;
+
+      // Convert dBFS to relative power, normalize
+      const minDB = -100, maxDB = 0;
+      const normalized = [];
+      for (let i = 0; i < bins; i++) {
+        const db = Math.max(minDB, Math.min(maxDB, avgFFT[i]));
+        normalized.push((db - minDB) / (maxDB - minDB)); // 0..1
+      }
+
+      // Helper: get average for a frequency range
+      const rangeAvg = (fLow, fHigh) => {
+        const binLow  = Math.max(0, Math.round(fLow  / (sr / 2) * bins));
+        const binHigh = Math.min(bins - 1, Math.round(fHigh / (sr / 2) * bins));
+        if (binHigh <= binLow) return 0.5;
+        let sum = 0;
+        for (let i = binLow; i <= binHigh; i++) sum += normalized[i];
+        return sum / (binHigh - binLow + 1);
+      };
+
+      // EQ bands: measure actual vs. flat reference
+      const bands = [
+        { label: 'Sub',    range: '20-60',    fLow: 20,   fHigh: 60    },
+        { label: 'Bass',   range: '60-250',   fLow: 60,   fHigh: 250   },
+        { label: 'Lo-Mid', range: '250-500',  fLow: 250,  fHigh: 500   },
+        { label: 'Mid',    range: '500-2k',   fLow: 500,  fHigh: 2000  },
+        { label: 'Hi-Mid', range: '2k-6k',   fLow: 2000, fHigh: 6000  },
+        { label: 'Treble', range: '6k-20k',  fLow: 6000, fHigh: 20000 },
+      ];
+
+      const measurements = bands.map(b => ({
+        ...b,
+        measured: rangeAvg(b.fLow, b.fHigh)
+      }));
+
+      // Target is the mean of all bands (flat reference)
+      const target = measurements.reduce((s, b) => s + b.measured, 0) / measurements.length;
+
+      // Calculate correction (invert deviation), scale to ±12dB
+      const eqBands = measurements.map(b => {
+        const deviation = b.measured - target; // positive = boosted, needs cut
+        const dbCorrection = -deviation * 24; // invert and scale
+        const clamped = Math.max(-12, Math.min(12, dbCorrection));
+        return {
+          label: b.label,
+          range: b.range + 'Hz',
+          value: parseFloat(clamped.toFixed(1)),
+        };
+      });
+
+      // Room acoustics score
+      const deviations = measurements.map(b => Math.abs(b.measured - target));
+      const maxDev = Math.max(...deviations);
+      const avgDev = deviations.reduce((s, v) => s + v, 0) / deviations.length;
+      const score = Math.round(Math.max(0, Math.min(100, 100 - (avgDev * 200))));
+      const flatness = Math.round(Math.max(0, 100 - (avgDev * 400)));
+      const peakDev = parseFloat((maxDev * 24).toFixed(1));
+
+      // Room issues
+      const issues = [];
+      const sub   = measurements[0].measured;
+      const bass  = measurements[1].measured;
+      const loMid = measurements[2].measured;
+      const mid   = measurements[3].measured;
+      const hiMid = measurements[4].measured;
+      const treble= measurements[5].measured;
+      const midRef = (mid + loMid) / 2;
+
+      if (bass > midRef + 0.15) issues.push({
+        icon: '〜', title: 'Bass Buildup Detected',
+        desc: 'Elevated low frequencies — likely room mode near 80–120Hz. Consider acoustic bass traps in corners.',
+        severity: 'MODERATE', color: '240,165,0'
+      });
+      if (sub > midRef + 0.2) issues.push({
+        icon: '📢', title: 'Sub-bass Resonance',
+        desc: 'Strong sub-bass peak detected. Room modes are common in small/medium rooms. Bass trapping or EQ cut recommended.',
+        severity: 'HIGH', color: '248,81,73'
+      });
+      if (treble < midRef - 0.15) issues.push({
+        icon: '🧶', title: 'High-Frequency Rolloff',
+        desc: 'Reduced treble response — your room may be over-damped (thick carpets, curtains, foam). Try treble boost or reduce soft furnishings.',
+        severity: 'MODERATE', color: '240,165,0'
+      });
+      if (treble > midRef + 0.15) issues.push({
+        icon: '✨', title: 'Treble Brightness',
+        desc: 'Elevated high frequencies — hard reflective surfaces (glass, tile). Consider diffusion panels or rugs.',
+        severity: 'LOW', color: '88,166,255'
+      });
+      if (loMid > midRef + 0.12) issues.push({
+        icon: '🔈', title: 'Low-Mid Muddiness',
+        desc: 'Excess energy around 250–500Hz creates a "muddy" or "boxy" sound. Common in parallel-walled rooms.',
+        severity: 'MODERATE', color: '240,165,0'
+      });
+      if (hiMid < midRef - 0.1) issues.push({
+        icon: '😶', title: 'Presence Dip',
+        desc: 'Reduced 2–6kHz presence. Dialogue and instrument detail may sound muffled. A presence boost is recommended.',
+        severity: 'LOW', color: '88,166,255'
+      });
+      if (issues.length === 0) issues.push({
+        icon: '✅', title: 'Excellent Room Response',
+        desc: 'Your room\'s frequency response is relatively flat. Minor EQ corrections are all that\'s needed.',
+        severity: 'GOOD', color: '56,211,159'
+      });
+
+      // Sony receiver settings
+      const bassCorr = eqBands[1].value;
+      const trebleCorr = eqBands[5].value;
+      const subCorr = eqBands[0].value;
+      const sonySettings = [
+        { name: 'Bass Level',         path: 'Menu → Sound → EQ',            value: this.sonyValue(bassCorr),   unit: 'dB', icon: '🔉', color: '88,166,255' },
+        { name: 'Treble Level',       path: 'Menu → Sound → EQ',            value: this.sonyValue(trebleCorr), unit: 'dB', icon: '🔊', color: '88,166,255' },
+        { name: 'Subwoofer Level',    path: 'Menu → Speaker → Sub Level',   value: this.sonyValue(subCorr),    unit: 'dB', icon: '💥', color: '240,165,0'  },
+        { name: 'Center Level',       path: 'Menu → Speaker → Level',       value: this.sonyValue(eqBands[3].value * 0.3), unit: 'dB', icon: '🎙', color: '56,211,159' },
+        { name: 'Surround Level',     path: 'Menu → Speaker → Level',       value: this.sonyValue(eqBands[4].value * 0.25), unit: 'dB', icon: '↔️', color: '56,211,159' },
+        { name: 'Surround Sound Mode',path: 'Menu → Sound → Surround',      value: score > 70 ? 'A.F.D. Auto' : 'Movie',   unit: '',   icon: '🌐', color: '56,211,159' },
+      ];
+
+      // Build chart data (sampled frequency bins)
+      const chartPoints = 64;
+      const freqData = [], measuredData = [], flatData = [];
+      for (let i = 1; i <= chartPoints; i++) {
+        const frac = Math.pow(i / chartPoints, 2); // log-ish
+        const f = Math.round(20 + frac * (20000 - 20));
+        const binIdx = Math.round(f / (sr / 2) * bins);
+        const val = (normalized[Math.min(binIdx, bins-1)] - 0.5) * 24; // center at 0 dB
+        freqData.push(f);
+        measuredData.push(parseFloat(val.toFixed(2)));
+        flatData.push(0);
+      }
+
+      this.results = { score, flatness, peakDev, issues, eqBands, sonySettings, freqData, measuredData, flatData };
+    },
+
+    sonyValue(v) {
+      const rounded = Math.round(v * 2) / 2; // 0.5 step
+      return (rounded >= 0 ? '+' : '') + rounded.toFixed(1);
+    },
+
+    // ─── Frequency Chart ─────────────────────────────────────
+    renderFreqChart() {
+      const canvas = document.getElementById('freqChart');
+      if (!canvas) return;
+      if (this.freqChart) { this.freqChart.destroy(); }
+
+      const { freqData, measuredData, flatData } = this.results;
+
+      this.freqChart = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels: freqData,
+          datasets: [
+            {
+              label: 'Room Response',
+              data: measuredData,
+              borderColor: '#58a6ff',
+              backgroundColor: 'rgba(88,166,255,0.08)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4,
+              pointRadius: 0,
+            },
+            {
+              label: 'Flat Reference (0 dB)',
+              data: flatData,
+              borderColor: 'rgba(56,211,159,0.5)',
+              borderWidth: 1,
+              borderDash: [5, 5],
+              fill: false,
+              tension: 0,
+              pointRadius: 0,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 1200, easing: 'easeInOutQuart' },
+          plugins: {
+            legend: {
+              labels: { color: '#8b949e', font: { size: 11, family: 'Inter' }, boxWidth: 20 }
+            },
+            tooltip: {
+              backgroundColor: '#161b22',
+              borderColor: '#30363d',
+              borderWidth: 1,
+              titleColor: '#e6edf3',
+              bodyColor: '#8b949e',
+              callbacks: {
+                title: items => items[0].label + ' Hz',
+                label: item => `${item.dataset.label}: ${item.raw > 0 ? '+' : ''}${item.raw} dB`
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'logarithmic',
+              title: { display: true, text: 'Frequency (Hz)', color: '#8b949e', font: { size: 11 } },
+              ticks: {
+                color: '#8b949e',
+                font: { size: 10, family: 'JetBrains Mono' },
+                maxTicksLimit: 8,
+                callback: v => {
+                  const labels = { 20: '20', 50: '50', 100: '100', 200: '200', 500: '500', 1000: '1k', 2000: '2k', 5000: '5k', 10000: '10k', 20000: '20k' };
+                  return labels[v] || null;
+                }
+              },
+              grid: { color: 'rgba(48,54,61,0.4)' }
+            },
+            y: {
+              title: { display: true, text: 'Level (dB)', color: '#8b949e', font: { size: 11 } },
+              min: -15, max: 15,
+              ticks: {
+                color: '#8b949e',
+                font: { size: 10, family: 'JetBrains Mono' },
+                callback: v => (v > 0 ? '+' : '') + v + ' dB'
+              },
+              grid: {
+                color: ctx => ctx.tick.value === 0 ? 'rgba(56,211,159,0.4)' : 'rgba(48,54,61,0.25)',
+                lineWidth: ctx => ctx.tick.value === 0 ? 2 : 1,
+              }
+            }
+          }
+        }
+      });
+    },
+
+    // ─── Copy Settings ───────────────────────────────────────
+    copySettings() {
+      const r = this.results;
+      const lines = [
+        '══════════════════════════════════════════',
+        '  SONY HOME THEATER — AI ROOM ANALYSIS',
+        '══════════════════════════════════════════',
+        '',
+        `Room Acoustics Score: ${r.score}/100`,
+        `Response Flatness:    ${r.flatness}%`,
+        `Peak Deviation:       ${r.peakDev} dB`,
+        '',
+        '── EQ RECOMMENDATIONS ──',
+        ...r.eqBands.map(b => `  ${b.label.padEnd(8)} (${b.range.padEnd(10)}): ${b.value > 0 ? '+' : ''}${b.value} dB`),
+        '',
+        '── SONY RECEIVER SETTINGS ──',
+        ...r.sonySettings.map(s => `  ${s.name.padEnd(20)}: ${s.value} ${s.unit}`),
+        '',
+        '── ROOM ISSUES DETECTED ──',
+        ...r.issues.map(i => `  [${i.severity}] ${i.title}: ${i.desc}`),
+        '',
+        '══════════════════════════════════════════',
+        '  Disclaimer: AI-estimated. For professional',
+        '  calibration use Audyssey or Dirac Live.',
+        '══════════════════════════════════════════',
+      ].join('\n');
+
+      navigator.clipboard.writeText(lines).then(() => {
+        this.showCopied = true;
+        setTimeout(() => { this.showCopied = false; }, 2500);
+      });
+    },
+  };
+}
+</script>
+</body>
+</html>
